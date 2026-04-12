@@ -2,56 +2,64 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
-use App\Models\Hall;
-use App\Models\Courses;
 use App\Models\User;
-use Illuminate\Support\Facades\DB;
+use App\Models\Courses;
+use Illuminate\Support\Facades\Hash;
 
 class SchoolSystemSeeder extends Seeder
 {
-    /**
-     * Run the database seeds.
-     */
-    public function run(): void
+    public function run()
     {
-        // 1. Create Halls with varying capacities [cite: 246]
-        $halls = [
-            ['name' => 'Grand Hall', 'capacity' => 100],
-            ['name' => 'Room 101', 'capacity' => 30],
-            ['name' => 'Room 102', 'capacity' => 30],
-            ['name' => 'Lecture Theater', 'capacity' => 150],
-        ];
-        foreach ($halls as $hall) {
-            Hall::create($hall);
+        
+        // 1. Create 5 Teachers
+        $teachers = [];
+        for ($i = 1; $i <= 5; $i++) {
+            $teachers[] = User::create([
+                'name' => "Teacher $i",
+                'email' => "teacher$i@uni.edu",
+                'password' => Hash::make('password'),
+                'role' => 'teacher'
+            ]);
         }
 
-        // 2. Create 200 Students [cite: 223, 278]
-        $students = User::factory()->count(200)->create();
-
-        // 3. Create 15 Courses [cite: 130, 224]
-        $courses = [
-            ['name' => 'Database Systems', 'code' => 'CS301'],
-            ['name' => 'Web Development', 'code' => 'CS302'],
-            ['name' => 'Data Structures', 'code' => 'CS201'],
-            ['name' => 'Algorithms', 'code' => 'CS202'],
-            ['name' => 'Operating Systems', 'code' => 'CS401'],
-            ['name' => 'Artificial Intelligence', 'code' => 'CS405'],
-            ['name' => 'Software Engineering', 'code' => 'CS305'],
-            ['name' => 'Calculus I', 'code' => 'MATH101'],
-            ['name' => 'Linear Algebra', 'code' => 'MATH201'],
-            ['name' => 'Physics I', 'code' => 'PHYS101'],
+        // 2. Create 20 Courses and assign them to random teachers
+        $courseList = [
+            'Math 101', 'Physics 101', 'Chemistry 101', 'Biology 101', 'History 101',
+            'English 201', 'Calculus II', 'Database Systems', 'Web Development', 'Mobile Apps',
+            'Cyber Security', 'AI Basics', 'Software Engineering', 'Data Structures', 'Algorithms',
+            'Network Security', 'Operating Systems', 'Cloud Computing', 'UI/UX Design', 'Discrete Math'
         ];
 
-        foreach ($courses as $courseData) {
-            $course = Courses::create($courseData);
+        $createdCourses = [];
+        foreach ($courseList as $index => $name) {
+    $createdCourses[] = Courses::create([
+        'name' => $name,
+        // ADD THIS LINE BELOW:
+        'code' => 'CRS-' . str_pad($index + 1, 3, '0', STR_PAD_LEFT), 
+        'teacher_id' => $teachers[array_rand($teachers)]->id 
+    ]);
 
-            // 4. Enroll a random number of students in each course (20-60 per course)
-            // This is crucial for testing student conflicts in the generator [cite: 103, 167]
-            $enrolledStudents = $students->random(rand(20, 60))->pluck('id');
-            $course->students()->attach($enrolledStudents);
+        }
+
+        // 3. Create 50 Students
+        $students = [];
+        for ($i = 1; $i <= 50; $i++) {
+            $students[] = User::create([
+                'name' => "Student $i",
+                'email' => "student$i@student.edu",
+                'password' => Hash::make('password'),
+                'role' => 'student'
+            ]);
+        }
+
+        // 4. Randomly Enroll Students into Courses (5 courses per student)
+        foreach ($students as $student) {
+            // Pick 5 random unique courses for each student
+            $randomCourses = array_rand($createdCourses, 5);
+            foreach ($randomCourses as $courseIndex) {
+                $student->courses()->attach($createdCourses[$courseIndex]->id);
+            }
         }
     }
 }
-    
