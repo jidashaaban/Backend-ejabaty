@@ -10,6 +10,13 @@ class ScheduleController extends Controller
     /**
      * Handle the generation request and return JSON.
      */
+    protected $scheduleGenerator;
+
+    public function __construct(ScheduleGenerator $generator){
+        $this->scheduleGenerator = $generator;
+    }
+
+
     public function store(Request $request, ScheduleGenerator $generator)
     {
         // Validate the incoming request [cite: 155]
@@ -18,14 +25,13 @@ class ScheduleController extends Controller
         ]);
 
         try {
-            // Trigger the generation engine [cite: 142, 155]
-            $schedule = $generator->generate($request->type);
+            $result = $this->scheduleGenerator->generate($request->type);
 
             // Load the sessions to include them in the JSON output 
             return response()->json([
                 'success' => true,
                 'message' => 'Schedule generated successfully',
-                'data' => $schedule->load('sessions')
+                'data' => $result
             ], 201);
 
         } catch (\Exception $e) {

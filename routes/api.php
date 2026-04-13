@@ -20,3 +20,6 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 
 use App\Http\Controllers\ScheduleController;
 Route::post('/generate-schedule', [ScheduleController::class, 'store']);
+
+use App\Http\Controllers\SpecialScheduleController;
+Route::get('/my-schedule/{userId}', [SpecialScheduleController::class, 'getMySchedule']);

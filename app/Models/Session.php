@@ -24,6 +24,8 @@ class Session extends Model
     public function course()
     {
         // Use 'Courses' to match your plural model name
-        return $this->belongsTo(Courses::class, 'course_id');
+        return $this->belongsTo(Courses::class);
     }
+
+    
 }
