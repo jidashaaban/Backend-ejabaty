@@ -9,32 +9,35 @@ use App\Models\User;
 
 class SpecialScheduleController extends Controller
 {
-    public function getMySchedule($userId)
+    public function getMySchedule(Request $request, $userId)
     {
-        // 1. Manually find the user by the ID passed in the URL
+        // 1. Manually find the user by ID
         $user = User::find($userId);
         
         if (!$user) {
-            return response()->json(['message' => 'User ID ' . $userId . ' not found in database.'], 404);
+            return response()->json(['message' => 'User not found'], 404);
         }
 
-        // 2. Find the LATEST Master Schedule (Course type)
-        $masterScheduleId = Schedule::where('type', 'course')->latest()->value('id');
+        // 2. Get the schedule type (default to course)
+        $type = $request->query('type', 'course');
+
+        // 3. Find the latest Master Schedule of that type
+        $masterScheduleId = Schedule::where('type', $type)->latest()->value('id');
 
         if (!$masterScheduleId) {
-            return response()->json(['message' => 'No Master Schedule exists. Generate one first!'], 404);
+            return response()->json(['message' => "No $type schedule found."], 404);
         }
 
-        // 3. Filter sessions based on the user's role
+        // 4. Filter sessions based on Role
         $sessionsQuery = Session::where('schedule_id', $masterScheduleId);
 
         if ($user->role === 'student') {
-            // Filter sessions where this student is enrolled
+            // Filter sessions where the student is enrolled in the course
             $sessionsQuery->whereHas('course.students', function($query) use ($user) {
                 $query->where('users.id', $user->id);
             });
         } elseif ($user->role === 'teacher') {
-            // Filter sessions where this user is the teacher
+            // Filter sessions where the user is the assigned teacher
             $sessionsQuery->whereHas('course', function($query) use ($user) {
                 $query->where('teacher_id', $user->id);
             });
@@ -46,10 +49,9 @@ class SpecialScheduleController extends Controller
             'success' => true,
             'viewing_as' => [
                 'name' => $user->name,
-                'role' => $user->role,
-                'id'   => $user->id
+                'role' => $user->role
             ],
-            'master_schedule_id' => $masterScheduleId,
+            'type' => $type,
             'sessions' => $sessions
         ]);
     }
