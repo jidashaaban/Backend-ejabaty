@@ -5,9 +5,15 @@ namespace App\Services;
 use App\Models\Schedule;
 use App\Models\Courses; 
 use App\Models\Session;
+use App\Services\ExamHallServices;
 use Carbon\Carbon;
 
 class ScheduleGenerator {
+    protected $hallService;
+
+    public function __construct(ExamHallService $hallService) {
+        $this->hallService = $hallService;
+    }
     
     public function generate($type) {
         set_time_limit(120); 
@@ -34,8 +40,21 @@ class ScheduleGenerator {
 
         // 3. GENERATE SESSIONS
         foreach ($courses as $course) {
-            $this->assignSession($schedule, $course, $type);
+            $session = $this->assignSession($schedule, $course, $type);
+            
+            if($type === 'exam' && $session){
+                $hallResult = $this->hallService->distributeStudents($session->id,$course->id);
 
+                if($hallResult['status'] === 'warning'){
+                    $failedCourses[] = [
+                        'id' => $course->id,
+                        'name' => $course->name,
+                        'reason' => $hallResult['message']
+                    ];
+                }
+
+
+            }
             // Verify the sessions for this specific schedule
             $sessionsCount = \App\Models\Session::where('schedule_id', $schedule->id)
                                     ->where('course_id', $course->id)
@@ -56,6 +75,7 @@ class ScheduleGenerator {
      private function assignSession($schedule, $course, $type) {
         $requiredSessions = ($type === 'exam') ? 1 : 2;
         $sessionsCreated = 0;
+        $lastCreatedSession = null;
         
         // Define these BEFORE the loops
         $days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday'];
@@ -82,7 +102,7 @@ class ScheduleGenerator {
                 }
 
                 if (!$hasStudentConflict && !$hasTeacherConflict) {
-                    Session::create([
+                    $lastCreatedSession = Session::create([
                         'schedule_id' => $schedule->id,
                         'course_id' => $course->id,
                         'day' => $day,
@@ -96,6 +116,7 @@ class ScheduleGenerator {
                 }
             }
         }
+        return $lastCreatedSession;
     }
 
     private function hasStudentConflict($course, $day, $time, $type) {

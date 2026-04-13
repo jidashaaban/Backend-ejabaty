@@ -28,22 +28,42 @@ class SpecialScheduleController extends Controller
             return response()->json(['message' => "No $type schedule found."], 404);
         }
 
-        // 4. Filter sessions based on Role
+        // 4. Filter sessions based on Role and include Hall Assignments
         $sessionsQuery = Session::where('schedule_id', $masterScheduleId);
 
         if ($user->role === 'student') {
-            // Filter sessions where the student is enrolled in the course
+            // Filter sessions where the student is enrolled
             $sessionsQuery->whereHas('course.students', function($query) use ($user) {
                 $query->where('users.id', $user->id);
-            });
+            })
+            // IMPORTANT: Only pull the hall assigned to THIS specific student [cite: 184, 194]
+            ->with(['course', 'hallAssignments' => function($query) use ($userId) {
+                $query->where('student_id', $userId)->with('hall');
+            }]);
         } elseif ($user->role === 'teacher') {
-            // Filter sessions where the user is the assigned teacher
+            // Teachers usually don't have specific hall assignments in this logic, 
+            // but we fetch the course info normally.
             $sessionsQuery->whereHas('course', function($query) use ($user) {
                 $query->where('teacher_id', $user->id);
-            });
+            })->with('course');
         }
 
-        $sessions = $sessionsQuery->with('course')->get();
+        $sessions = $sessionsQuery->get();
+
+        // 5. Clean up the output so the hall name is easy for the frontend to read 
+        $formattedSessions = $sessions->map(function($session) use ($user) {
+            return [
+                'id' => $session->id,
+                'course' => $session->course->name,
+                'day' => $session->day,
+                'start_time' => $session->start_time,
+                'end_time' => $session->end_time,
+                // Extract the hall name if it exists, otherwise return 'No Hall' 
+                'hall' => ($user->role === 'student') 
+                    ? ($session->hallAssignments->first()->hall->name ?? 'No Hall Assigned') 
+                    : 'N/A',
+            ];
+        });
 
         return response()->json([
             'success' => true,
@@ -52,7 +72,7 @@ class SpecialScheduleController extends Controller
                 'role' => $user->role
             ],
             'type' => $type,
-            'sessions' => $sessions
+            'sessions' => $formattedSessions
         ]);
     }
 }

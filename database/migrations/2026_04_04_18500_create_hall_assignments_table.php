@@ -13,9 +13,9 @@ return new class extends Migration
     {
         Schema::create('hall_assignments', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('session_id')->constrained();
-            $table->foreignId('hall_id')->constrained();
-            $table->foreignId('student_id')->constrained('users');
+            $table->foreignId('session_id')->constrained('sessions')->onDelete('cascade');
+            $table->foreignId('student_id')->constrained('users')->onDelete('cascade');
+            $table->foreignId('hall_id')->constrained('halls')->onDelete('cascade');
             $table->timestamps();
         });
     }

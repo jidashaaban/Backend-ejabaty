@@ -27,5 +27,8 @@ class Session extends Model
         return $this->belongsTo(Courses::class);
     }
 
-    
+    public function hallAssignments()
+{
+    return $this->hasMany(HallAssignment::class, 'session_id');
+}
 }
