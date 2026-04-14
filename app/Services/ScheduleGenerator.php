@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Schedule;
 use App\Models\Courses; 
 use App\Models\Session;
+use App\Models\Hall;
 use App\Services\ExamHallService;
 use Carbon\Carbon;
 
@@ -37,25 +38,27 @@ class ScheduleGenerator {
 
         // 3. GENERATE SESSIONS & ASSIGN HALLS
         foreach ($courses as $course) {
-            // Step 1: Time Assignment
+            // Solve Time & Room assignment
             $session = $this->assignSession($schedule, $course, $type);
             
             if ($session) {
-                // Step 2: Hall Assignment (Exams Only)
+                // If this is an exam, we use the complex multi-hall distribution
                 if ($type === 'exam') {
                     $hallResult = $this->hallService->distributeStudents($session->id, $course->id);
 
                     if ($hallResult) {
                         $failedCourses[] = $hallResult;
                     } 
-                }
+                } 
+                // Note: For 'course' type, the room was already assigned inside assignSession()
             } else {
-                $failedCourses[] = "Alert: Could not find a time slot for {$course->name}";
+                $failedCourses[] = "Alert: Could not find a time slot or available hall for {$course->name}";
             }
         }
 
         return [
-            'schedule' => $schedule->load('sessions.hallAssignments.hall'), 
+            // Load both single hall (for courses) and multiple halls (for exams)
+            'schedule' => $schedule->load(['sessions.hall', 'sessions.hallAssignments.hall']), 
             'admin_alerts' => $failedCourses
         ];
     }
@@ -83,6 +86,14 @@ class ScheduleGenerator {
                 $hasStudentConflict = $this->hasStudentConflict($course, $day, $time, $type);
                 $hasTeacherConflict = ($type === 'course') ? $this->hasTeacherConflict($course, $day, $time, $type) : false;
 
+                // NEW: Find an available hall for regular courses
+                $hallId = null;
+                if ($type === 'course') {
+                    $hallId = $this->getAvailableHallId($day, $time, $schedule->id);
+                    // If no halls are free at this time, we can't use this slot
+                    if (!$hallId) continue; 
+                }
+
                 if (!$hasStudentConflict && !$hasTeacherConflict) {
                     $lastCreatedSession = Session::create([
                         'schedule_id' => $schedule->id,
@@ -90,6 +101,7 @@ class ScheduleGenerator {
                         'day'         => $day,
                         'start_time'  => $time,
                         'end_time'    => date('H:i:s', strtotime($time . ' +90 minutes')),
+                        'hall_id'     => $hallId, // Assigned for courses, null for exams (exams use pivot table)
                     ]);
                     $sessionsCreated++;
                     break; 
@@ -97,6 +109,21 @@ class ScheduleGenerator {
             }
         }
         return $lastCreatedSession; 
+    }
+
+    /**
+     * Finds a hall that isn't already booked for another course at this time
+     */
+    private function getAvailableHallId($day, $time, $scheduleId) {
+        // Get IDs of halls already occupied at this time in the same schedule
+        $occupiedHallIds = Session::where('day', $day)
+            ->where('start_time', $time)
+            ->where('schedule_id', $scheduleId)
+            ->whereNotNull('hall_id')
+            ->pluck('hall_id');
+
+        // Return the first hall that is NOT in the occupied list
+        return Hall::whereNotIn('id', $occupiedHallIds)->first()?->id;
     }
 
     private function hasStudentConflict($course, $day, $time, $type) {
