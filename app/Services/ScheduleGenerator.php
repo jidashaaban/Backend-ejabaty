@@ -5,10 +5,11 @@ namespace App\Services;
 use App\Models\Schedule;
 use App\Models\Courses; 
 use App\Models\Session;
-use App\Services\ExamHallServices;
+use App\Services\ExamHallService;
 use Carbon\Carbon;
 
 class ScheduleGenerator {
+    
     protected $hallService;
 
     public function __construct(ExamHallService $hallService) {
@@ -18,72 +19,57 @@ class ScheduleGenerator {
     public function generate($type) {
         set_time_limit(120); 
 
-        // 1. SAFELY CLEAN OLD DATA FOR THIS TYPE ONLY
-        // Find if a schedule of this type already exists (e.g., 'course')
-        $schedule = \App\Models\Schedule::where('type', $type)->first();
+        // 1. CLEAN OLD DATA
+        $schedule = Schedule::where('type', $type)->first();
 
         if ($schedule) {
-            // Delete only the sessions that belong to THIS schedule
-            \App\Models\Session::where('schedule_id', $schedule->id)->delete();
+            Session::where('schedule_id', $schedule->id)->delete();
         } else {
-            // If it doesn't exist, create a new one
-            $schedule = \App\Models\Schedule::create(['type' => $type]);
+            $schedule = Schedule::create(['type' => $type]);
         }
 
         // 2. GET COURSES
-        $courses = \App\Models\Courses::withCount('students')
+        $courses = Courses::withCount('students')
             ->orderBy('students_count', 'desc')
             ->get();
         
         $failedCourses = [];
-        $required = ($type === 'exam') ? 1 : 2;
 
-        // 3. GENERATE SESSIONS
+        // 3. GENERATE SESSIONS & ASSIGN HALLS
         foreach ($courses as $course) {
+            // Step 1: Time Assignment
             $session = $this->assignSession($schedule, $course, $type);
             
-            if($type === 'exam' && $session){
-                $hallResult = $this->hallService->distributeStudents($session->id,$course->id);
+            if ($session) {
+                // Step 2: Hall Assignment (Exams Only)
+                if ($type === 'exam') {
+                    $hallResult = $this->hallService->distributeStudents($session->id, $course->id);
 
-                if($hallResult['status'] === 'warning'){
-                    $failedCourses[] = [
-                        'id' => $course->id,
-                        'name' => $course->name,
-                        'reason' => $hallResult['message']
-                    ];
+                    if ($hallResult) {
+                        $failedCourses[] = $hallResult;
+                    } 
                 }
-
-
-            }
-            // Verify the sessions for this specific schedule
-            $sessionsCount = \App\Models\Session::where('schedule_id', $schedule->id)
-                                    ->where('course_id', $course->id)
-                                    ->count();
-
-            if ($sessionsCount < $required) {
-                $failedCourses[] = ['id' => $course->id, 'name' => $course->name];
+            } else {
+                $failedCourses[] = "Alert: Could not find a time slot for {$course->name}";
             }
         }
 
-        // 4. RETURN CLEAN DATA
         return [
-            'schedule' => $schedule->load('sessions'), 
-            'warnings' => $failedCourses
+            'schedule' => $schedule->load('sessions.hallAssignments.hall'), 
+            'admin_alerts' => $failedCourses
         ];
     }
-    
-     private function assignSession($schedule, $course, $type) {
+
+    private function assignSession($schedule, $course, $type) {
         $requiredSessions = ($type === 'exam') ? 1 : 2;
         $sessionsCreated = 0;
         $lastCreatedSession = null;
         
-        // Define these BEFORE the loops
         $days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday'];
         $times = ['08:00:00', '09:30:00', '11:00:00', '12:30:00', '14:00:00', '15:30:00','17:00:00'];
         shuffle($days);
 
         foreach ($days as $day) {
-            // Check if course is already on this day to prevent double-booking same day
             $alreadyOnDay = Session::where('schedule_id', $schedule->id)
                 ->where('course_id', $course->id)
                 ->where('day', $day)
@@ -95,28 +81,22 @@ class ScheduleGenerator {
                 if ($sessionsCreated >= $requiredSessions) break 2;
 
                 $hasStudentConflict = $this->hasStudentConflict($course, $day, $time, $type);
-                $hasTeacherConflict = false;
-                
-                if ($type === 'course') {
-                    $hasTeacherConflict = $this->hasTeacherConflict($course, $day, $time, $type);
-                }
+                $hasTeacherConflict = ($type === 'course') ? $this->hasTeacherConflict($course, $day, $time, $type) : false;
 
                 if (!$hasStudentConflict && !$hasTeacherConflict) {
                     $lastCreatedSession = Session::create([
                         'schedule_id' => $schedule->id,
-                        'course_id' => $course->id,
-                        'day' => $day,
-                        'start_time' => $time,
-                        'end_time' => date('H:i:s', strtotime($time . ' +90 minutes')),
+                        'course_id'   => $course->id,
+                        'day'         => $day,
+                        'start_time'  => $time,
+                        'end_time'    => date('H:i:s', strtotime($time . ' +90 minutes')),
                     ]);
                     $sessionsCreated++;
-                    
-                    // After placing one session, move to the next day
                     break; 
                 }
             }
         }
-        return $lastCreatedSession;
+        return $lastCreatedSession; 
     }
 
     private function hasStudentConflict($course, $day, $time, $type) {

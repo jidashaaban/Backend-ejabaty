@@ -1,8 +1,9 @@
 <?php
+
 namespace App\Services;
 
-use App\Models\Schedule; // Assuming your generated exams are stored here
 use App\Models\Hall;
+use App\Models\Student;
 use App\Models\HallAssignment;
 use App\Models\Courses;
 
@@ -10,46 +11,44 @@ class ExamHallService
 {
     public function distributeStudents($sessionId, $courseId)
     {
-        // 1. Fetch the course and its enrolled students
-        $course = Courses::with('students')->find($courseId);
-        $students = $course->students; 
+        // 1. Fetch the Students enrolled in this course
+        $students = Courses::find($courseId)->students;
+        $totalStudents = $students->count();
         
-        // 2. Fetch available halls, ordered from biggest to smallest
+        // 2. DYNAMICALLY FETCH HALLS FROM DATABASE [cite: 442]
+        // We order by capacity descending to fill largest rooms first 
         $halls = Hall::orderBy('capacity', 'desc')->get();
         
-        // Trackers
         $studentIndex = 0;
-        $totalStudents = $students->count();
 
-        // 3. Loop through the available halls
+        // 3. Loop through available halls until all students are seated [cite: 13, 14]
         foreach ($halls as $hall) {
-            $capacity = $hall->capacity;
+            if ($studentIndex >= $totalStudents) break;
 
-            // Take a "chunk" of students equal to this hall's capacity
+            $capacity = $hall->capacity;
+            
+            // Get the slice of students that fit in this hall [cite: 29]
             $studentsForThisHall = $students->slice($studentIndex, $capacity);
 
-            // Assign this chunk of students to the current hall
             foreach ($studentsForThisHall as $student) {
+                // Save the assignment to the hall_assignments table [cite: 15]
                 HallAssignment::create([
                     'session_id' => $sessionId,
                     'student_id' => $student->id,
-                    'hall_id'    => $hall->id
+                    'hall_id'    => $hall->id,
                 ]);
-                $studentIndex++; // Move to the next student
             }
 
-            // 4. Check if we have assigned all students. If yes, stop checking halls!
-            if ($studentIndex >= $totalStudents) {
-                break;
-            }
+            // Move the index forward by the number of students we just seated [cite: 31]
+            $studentIndex += $studentsForThisHall->count();
         }
-        if($studentIndex < $totalStudents) {
-            $unassignedCount = $totalStudents - $studentIndex;
-            return [
-                'status' => 'warning',
-                'message' => "Course {$course->name} has {$unassignedCount} students without a hall assignmnet."
-            ];
+
+        // 4. Return warnings if some students didn't get a seat [cite: 76, 79]
+        if ($studentIndex < $totalStudents) {
+            $missing = $totalStudents - $studentIndex;
+            return "Warning: Not enough hall capacity for Course ID: $courseId. $missing students have no seats.";
         }
-        return ['status' => 'success'];        
+
+        return null;
     }
 }
