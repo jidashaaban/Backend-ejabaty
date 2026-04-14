@@ -23,3 +23,9 @@ Route::post('/generate-schedule', [ScheduleController::class, 'store']);
 
 use App\Http\Controllers\SpecialScheduleController;
 Route::get('/my-schedule/{userId}', [SpecialScheduleController::class, 'getMySchedule']);
+
+
+use App\Http\Controllers\HallController;
+Route::post('/setup-halls', [HallController::class, 'store']);
+
+Route::get('/halls', [HallController::class, 'index']);

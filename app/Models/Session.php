@@ -14,7 +14,8 @@ class Session extends Model
         'course_id', 
         'day', 
         'start_time', 
-        'end_time'
+        'end_time',
+        'hall_id'
     ];
 
     public function schedule(){
@@ -30,5 +31,9 @@ class Session extends Model
     public function hallAssignments()
 {
     return $this->hasMany(HallAssignment::class, 'session_id');
+}
+public function hall()
+{
+    return $this->belongsTo(Hall::class,'hall_id');
 }
 }

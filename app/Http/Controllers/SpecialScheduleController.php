@@ -11,57 +11,62 @@ class SpecialScheduleController extends Controller
 {
     public function getMySchedule(Request $request, $userId)
     {
-        // 1. Manually find the user by ID
         $user = User::find($userId);
         
         if (!$user) {
             return response()->json(['message' => 'User not found'], 404);
         }
 
-        // 2. Get the schedule type (default to course)
         $type = $request->query('type', 'course');
-
-        // 3. Find the latest Master Schedule of that type
         $masterScheduleId = Schedule::where('type', $type)->latest()->value('id');
 
         if (!$masterScheduleId) {
             return response()->json(['message' => "No $type schedule found."], 404);
         }
 
-        // 4. Filter sessions based on Role and include Hall Assignments
         $sessionsQuery = Session::where('schedule_id', $masterScheduleId);
 
         if ($user->role === 'student') {
-            // Filter sessions where the student is enrolled
             $sessionsQuery->whereHas('course.students', function($query) use ($user) {
                 $query->where('users.id', $user->id);
-            })
-            // IMPORTANT: Only pull the hall assigned to THIS specific student [cite: 184, 194]
-            ->with(['course', 'hallAssignments' => function($query) use ($userId) {
-                $query->where('student_id', $userId)->with('hall');
-            }]);
+            });
+
+            // UPDATE: Load 'hall' for courses and 'hallAssignments' for exams [cite: 48, 144]
+            if ($type === 'course') {
+                $sessionsQuery->with(['course', 'hall']); // Direct relationship for courses [cite: 43, 48]
+            } else {
+                $sessionsQuery->with(['course', 'hallAssignments' => function($query) use ($userId) {
+                    $query->where('student_id', $userId)->with('hall');
+                }]);
+            }
+
         } elseif ($user->role === 'teacher') {
-            // Teachers usually don't have specific hall assignments in this logic, 
-            // but we fetch the course info normally.
             $sessionsQuery->whereHas('course', function($query) use ($user) {
                 $query->where('teacher_id', $user->id);
-            })->with('course');
+            })->with(['course', 'hall']); // Teachers also see the direct hall for courses 
         }
 
         $sessions = $sessionsQuery->get();
 
-        // 5. Clean up the output so the hall name is easy for the frontend to read 
-        $formattedSessions = $sessions->map(function($session) use ($user) {
+        $formattedSessions = $sessions->map(function($session) use ($user, $type) {
+            // Determine the hall name based on the schedule type [cite: 52]
+            $hallName = 'No Hall Assigned';
+
+            if ($type === 'course') {
+                // For courses, use the direct relationship on the session [cite: 43, 52]
+                $hallName = $session->hall->name ?? 'No Hall Assigned';
+            } else {
+                // For exams, use the student-specific assignment [cite: 146]
+                $hallName = $session->hallAssignments->first()->hall->name ?? 'No Hall Assigned';
+            }
+
             return [
                 'id' => $session->id,
                 'course' => $session->course->name,
                 'day' => $session->day,
                 'start_time' => $session->start_time,
                 'end_time' => $session->end_time,
-                // Extract the hall name if it exists, otherwise return 'No Hall' 
-                'hall' => ($user->role === 'student') 
-                    ? ($session->hallAssignments->first()->hall->name ?? 'No Hall Assigned') 
-                    : 'N/A',
+                'hall' => ($user->role === 'teacher' && $type === 'exam') ? 'Check Hall List' : $hallName,
             ];
         });
 
