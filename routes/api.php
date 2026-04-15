@@ -29,3 +29,19 @@ use App\Http\Controllers\HallController;
 Route::post('/setup-halls', [HallController::class, 'store']);
 
 Route::get('/halls', [HallController::class, 'index']);
+
+use App\Http\Controllers\QuizController;
+Route::post('/teacher/announce-quiz', [QuizController::class, 'announceQuiz']);
+Route::get('/student/{studentId}/upcoming-quizzes', [QuizController::class, 'studentUpcomingQuizzes']);
+
+use App\Http\Controllers\StudentCourseController;
+Route::get('/available-courses', [StudentCourseController::class, 'availableCourses']);
+Route::post('/courses/{courseId}/join', [StudentCourseController::class, 'joinCourse']);
+Route::get('/my-courses/{studentId}', [StudentCourseController::class, 'myCourses']);
+
+use App\Http\Controllers\Admin\CourseController as AdminCourseController;
+Route::post('/admin/add-course', [AdminCourseController::class, 'store']);
+
+use App\Http\Controllers\Admin\PollController;
+Route::post('/admin/create-poll', [PollController::class, 'store']);
+Route::get('/student/polls', [PollController::class, 'index']);
