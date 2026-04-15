@@ -41,6 +41,7 @@ Route::get('/my-courses/{studentId}', [StudentCourseController::class, 'myCourse
 
 use App\Http\Controllers\Admin\CourseController as AdminCourseController;
 Route::post('/admin/add-course', [AdminCourseController::class, 'store']);
+Route::post('/admin/confirm-payment', [AdminCourseController::class, 'confirmPayment']);
 
 use App\Http\Controllers\Admin\PollController;
 Route::post('/admin/create-poll', [PollController::class, 'store']);
