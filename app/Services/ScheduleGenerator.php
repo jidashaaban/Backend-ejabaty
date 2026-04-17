@@ -58,7 +58,7 @@ class ScheduleGenerator {
 
         return [
             // Load both single hall (for courses) and multiple halls (for exams)
-            'schedule' => $schedule->load(['sessions.hall', 'sessions.hallAssignments.hall']), 
+            'schedule' => $schedule->load(['sessions.course', 'sessions.hall', 'sessions.hallAssignments.hall']), 
             'admin_alerts' => $failedCourses
         ];
     }

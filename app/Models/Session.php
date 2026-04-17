@@ -15,7 +15,8 @@ class Session extends Model
         'day', 
         'start_time', 
         'end_time',
-        'hall_id'
+        'hall_id',
+        'teacher_id'
     ];
 
     public function schedule(){
@@ -36,4 +37,7 @@ public function hall()
 {
     return $this->belongsTo(Hall::class,'hall_id');
 }
+public function teacher() {
+        return $this->belongsTo(User::class, 'teacher_id');
+    }
 }

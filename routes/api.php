@@ -20,6 +20,7 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 
 use App\Http\Controllers\ScheduleController;
 Route::post('/generate-schedule', [ScheduleController::class, 'store']);
+Route::get('/weekly-program', [ScheduleController::class, 'index']);
 
 use App\Http\Controllers\SpecialScheduleController;
 Route::get('/my-schedule/{userId}', [SpecialScheduleController::class, 'getMySchedule']);
@@ -46,3 +47,4 @@ Route::post('/admin/confirm-payment', [AdminCourseController::class, 'confirmPay
 use App\Http\Controllers\Admin\PollController;
 Route::post('/admin/create-poll', [PollController::class, 'store']);
 Route::get('/student/polls', [PollController::class, 'index']);
+

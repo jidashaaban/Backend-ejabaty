@@ -33,9 +33,8 @@ class ScheduleController extends Controller
             if ($request->type === 'course') {
                 $hallResult = $hallAssigner->assignHallsToSchedule($schedule->id);
                 $adminReport = $hallResult['report']; // Contains the "Partial Fit" warnings
-
-                $schedule->load(['sessions.hall']);
             }
+            $schedule->load(['sessions.course', 'sessions.hall', 'sessions.hallAssignments.hall']);
 
             // 4. Return everything in a single, clean JSON response
             return response()->json([
@@ -52,4 +51,32 @@ class ScheduleController extends Controller
             ], 500);
         }
     }
+    public function index(Request $request)
+{
+    // 1. Determine if we want the 'course' or 'exam' schedule
+    $type = $request->query('type', 'course');
+
+    // 2. Fetch the latest schedule of that type
+    $schedule = \App\Models\Schedule::where('type', $type)->latest()->first();
+
+    if (!$schedule) {
+        return response()->json([
+            'success' => false,
+            'message' => 'No schedule found in the database.'
+        ], 404);
+    }
+
+    // 3. THE CRITICAL PART: Load all relationships so they "print" on frontend
+    // We need courses, halls, and exam hall assignments
+    $schedule->load([
+        'sessions.course', 
+        'sessions.hall', 
+        'sessions.hallAssignments.hall'
+    ]);
+
+    return response()->json([
+        'success' => true,
+        'data' => $schedule
+    ]);
+}
 }
