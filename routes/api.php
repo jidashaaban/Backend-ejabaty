@@ -20,7 +20,8 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 
 use App\Http\Controllers\ScheduleController;
 Route::post('/generate-schedule', [ScheduleController::class, 'store']);
-Route::get('/weekly-program', [ScheduleController::class, 'index']);
+Route::get('/admin-schedule', [ScheduleController::class, 'index']);
+Route::delete('sessions/{id}',[ScheduleController::class,'destroySession']);
 
 use App\Http\Controllers\SpecialScheduleController;
 Route::get('/my-schedule/{userId}', [SpecialScheduleController::class, 'getMySchedule']);
@@ -28,7 +29,6 @@ Route::get('/my-schedule/{userId}', [SpecialScheduleController::class, 'getMySch
 
 use App\Http\Controllers\HallController;
 Route::post('/setup-halls', [HallController::class, 'store']);
-
 Route::get('/halls', [HallController::class, 'index']);
 
 use App\Http\Controllers\QuizController;
