@@ -29,6 +29,26 @@ class User extends Authenticatable
                 ->withPivot('points', 'comment')
                 ->withTimestamps();
 }
+    public function complaints()
+{
+    return $this->hasMany(Complaint::class, 'parent_id');
+}  
+
+    public function children()
+{
+    return $this->belongsToMany(User::class, 'parent_student','parent_id','student_id');
+}  
+
+public function quizzes()
+{
+    // We use 'quiz_student' as the pivot table name 
+    // If your migration used 'student_id', specify it as the 3rd parameter [cite: 88]
+    return $this->belongsToMany(Quiz::class, 'quiz_student', 'student_id', 'quiz_id')
+                ->withPivot('points', 'comment') // This allows access to the marks [cite: 110, 135]
+                ->withTimestamps();
+}
+
+
     use HasApiTokens, HasFactory, Notifiable;
     
     /**

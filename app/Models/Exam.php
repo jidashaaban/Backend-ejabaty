@@ -10,7 +10,7 @@ class Exam extends Model
     use HasFactory;
     protected $fillable = ['course_id', 'title', 'is_published'];
     public function course() {
-        return $this->belongsTo(Courses::class);
+        return $this->belongsTo(Courses::class,'course_id');
     }
 
     public function questions() {

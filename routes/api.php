@@ -69,3 +69,11 @@ Route::get('/student/{id}/questions', [StudentQuestionController::class, 'myQues
 use App\Http\Controllers\TeacherQuestionController;
 Route::get('/teacher/{id}/questions/pending', [TeacherQuestionController::class, 'pendingQuestions']);
 Route::post('/teacher/questions/{questionId}/answer', [TeacherQuestionController::class, 'answerQuestion']);
+
+use App\Http\Controllers\ParentDashboardController;
+use App\Http\Controllers\ComplaintController;
+Route::get('/parent/{parentId}/child/{childId}/progress', [ParentDashboardController::class, 'getChildProgress']);
+Route::get('/parent/{parentId}/child/{childId}/exam-schedule', [ParentDashboardController::class, 'getChildExamSchedule']);
+Route::post('/parent/{parentId}/complaints/submit', [ComplaintController::class, 'submitComplaint']);
+Route::get('/parent/{parentId}/complaints', [ComplaintController::class, 'viewComplaints']);
+Route::post('/admin/{adminId}/complaints/{complaintId}/answer', [ComplaintController::class, 'answerComplaint']);
