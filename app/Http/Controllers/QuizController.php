@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
 use App\Models\Quiz;
 use App\Models\Session;
@@ -107,4 +108,62 @@ class QuizController extends Controller
             'upcoming_quizzes' => $upcomingQuizzes
         ]);
     }
+
+    public function addQuizMarks(Request $request){
+        $request->validate([
+            'quiz_id'=>'required|exists:quizzes,id',
+            'student_id'=>'required|exists:users,id',
+            'points'=>'required|numeric',
+            'comment'=>'nullable|string'
+        ]);
+
+        $quiz = Quiz::findOrFail($request->quiz_id);
+        if ($quiz->teacher_id !== $request->teacher_id) {
+           return response()->json(['message' => 'Unauthorized'], 403); 
+       }
+       $quiz->students()->syncWithoutDetaching([
+        $request->student_id => [
+            'points' => $request->points,
+            'comment' => $request->comment
+        ]
+     ]);
+     return response()->json(['message' => 'Points and comment added successfully!']);
+
+    }
+
+    public function getPastQuizzes($studentId) {
+    // 1. Get IDs of courses the student is enrolled in
+    $enrolledCourseIds = DB::table('user_course') // or course_student
+        ->where('user_id', $studentId)
+        ->pluck('course_id');
+
+    // 2. Fetch quizzes for those courses that happened before today
+    $pastQuizzes = Quiz::whereIn('course_id', $enrolledCourseIds)
+        ->whereDate('quiz_date', '<', Carbon::today())
+        ->with(['course', 'students' => function($query) use ($studentId) {
+            $query->where('student_id', $studentId); // Only fetch marks for THIS student
+        }])
+        ->get();
+
+    if ($pastQuizzes->isEmpty()) {
+        return response()->json(['message' => 'no past quizzes'], 200);
+    }
+
+    $formattedQuizzes = $pastQuizzes->map(function ($quiz) {
+        $pivot = $quiz->students->first()?->pivot;
+        return [
+            'course_name' => $quiz->course->name ?? 'N/A',
+            'quiz_name'   => $quiz->included_content, 
+            'date'        => $quiz->quiz_date,
+            'points'      => $pivot ? $pivot->points : null, 
+            'comment'     => $pivot ? $pivot->comment : null  //null if no comment
+        ];
+
+    });
+    return response()->json([
+        'success' => true,
+        'past_quizzes' => $formattedQuizzes 
+    ]);
+}
+
 }

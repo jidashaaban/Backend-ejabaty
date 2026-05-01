@@ -23,6 +23,12 @@ class User extends Authenticatable
                 ->withPivot('mark')
                 ->withTimestamps();
 }
+
+    public function pastQuizzes() {
+    return $this->belongsToMany(Quiz::class, 'quiz_student', 'student_id', 'quiz_id')
+                ->withPivot('points', 'comment')
+                ->withTimestamps();
+}
     use HasApiTokens, HasFactory, Notifiable;
     
     /**

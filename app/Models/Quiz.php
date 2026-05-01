@@ -19,5 +19,10 @@ class Quiz extends Model
     {
         return $this->belongsTo(Courses::class);
     }
-
+    
+    public function students() {
+    return $this->belongsToMany(User::class, 'quiz_student', 'quiz_id', 'student_id')
+                ->withPivot('points', 'comment')
+                ->withTimestamps();
+}
 }

@@ -35,6 +35,8 @@ Route::get('/halls', [HallController::class, 'index']);
 use App\Http\Controllers\QuizController;
 Route::post('/teacher/announce-quiz', [QuizController::class, 'announceQuiz']);
 Route::get('/student/{studentId}/upcoming-quizzes', [QuizController::class, 'studentUpcomingQuizzes']);
+Route::post('/quiz/submit-points', [QuizController::class, 'addQuizMarks']);
+Route::get('/student/{id}/past-quizzes', [QuizController::class, 'getPastQuizzes']);
 
 use App\Http\Controllers\StudentCourseController;
 Route::get('/available-courses', [StudentCourseController::class, 'availableCourses']);
