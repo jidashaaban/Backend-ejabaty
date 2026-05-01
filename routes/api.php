@@ -61,3 +61,11 @@ Route::post('/admin/submit-mark', [AdminMarkController::class, 'submitStudentMar
 
 use App\Http\Controllers\StudentMarkingSchemeController;
 Route::get('/student/{studentId}/exam-history', [StudentMarkingSchemeController::class, 'getMyExamsAndMarks']);
+
+use App\Http\Controllers\StudentQuestionController;
+Route::post('/student/questions/ask', [StudentQuestionController::class, 'askQuestion']);
+Route::get('/student/{id}/questions', [StudentQuestionController::class, 'myQuestions']);
+
+use App\Http\Controllers\TeacherQuestionController;
+Route::get('/teacher/{id}/questions/pending', [TeacherQuestionController::class, 'pendingQuestions']);
+Route::post('/teacher/questions/{questionId}/answer', [TeacherQuestionController::class, 'answerQuestion']);
