@@ -17,6 +17,12 @@ class User extends Authenticatable
                 ->withPivot('status', 'booked_at')
                 ->withTimestamps();
     }
+
+    public function exams() {
+    return $this->belongsToMany(Exam::class, 'exam_student','student_id','exam_id')
+                ->withPivot('mark')
+                ->withTimestamps();
+}
     use HasApiTokens, HasFactory, Notifiable;
     
     /**

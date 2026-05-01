@@ -90,9 +90,17 @@ class QuizController extends Controller
         // Fetch quizzes for those courses where the date is today or in the future
         $upcomingQuizzes = Quiz::with('course') // brings in the course name
             ->whereIn('course_id', $studentCourseIds)
-            ->whereDate('quiz_date', '>=', Carbon::today())
+            //->whereDate('quiz_date', '>=', Carbon::today())
             ->orderBy('quiz_date', 'asc') // closest quiz first
             ->get();
+        
+        if ($upcomingQuizzes->isEmpty()) {
+        return response()->json([
+            'success' => true,
+            'message' => 'no upcoming quizzes',
+            'upcoming_quizzes' => [] // We still return an empty array so the frontend doesn't crash
+        ]);
+    }
 
         return response()->json([
             'success' => true,

@@ -12,7 +12,7 @@ class HallSeeder extends Seeder
      */
     public function run(): void
     {
-        \App\Models\Hall::create(['name' => 'Auditorium A', 'capacity' => 10]);
-    \App\Models\Hall::create(['name' => 'Room 101', 'capacity' => 30]);
+        \App\Models\Hall::create(['name' => 'Auditorium A', 'capacity' => 1]);
+    \App\Models\Hall::create(['name' => 'Room 101', 'capacity' => 1]);
     }
 }

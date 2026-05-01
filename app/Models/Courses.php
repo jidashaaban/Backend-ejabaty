@@ -14,7 +14,7 @@ class Courses extends Model
     return $this->belongsToMany(User::class, 'user_course','course_id','user_id');
 
     return $this->belongsToMany(User::class, 'user_course', 'course_id', 'user_id')
-                ->withPivot('status', 'booked_at')
+                 ->withPivot('status', 'booked_at')
                 ->withTimestamps();
 }
 public function teacher() {

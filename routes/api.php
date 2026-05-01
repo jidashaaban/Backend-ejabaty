@@ -48,3 +48,13 @@ use App\Http\Controllers\Admin\PollController;
 Route::post('/admin/create-poll', [PollController::class, 'store']);
 Route::get('/student/polls', [PollController::class, 'index']);
 
+use App\Http\Controllers\TeacherExamController;
+Route::post('/teacher/{teacherId}/exams/create', [TeacherExamController::class, 'createExam']);
+Route::get('/teacher/{teacherId}/exams/{examId}', [TeacherExamController::class, 'getExamForMarking']);
+Route::post('/teacher/exams/{examId}/submit-marking', [TeacherExamController::class, 'submitMarkingScheme']);
+
+use App\Http\Controllers\AdminMarkController;
+Route::post('/admin/submit-mark', [AdminMarkController::class, 'submitStudentMark']); 
+
+use App\Http\Controllers\StudentMarkingSchemeController;
+Route::get('/student/{studentId}/exam-history', [StudentMarkingSchemeController::class, 'getMyExamsAndMarks']);
