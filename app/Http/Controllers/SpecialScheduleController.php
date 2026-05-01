@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use App\Models\Schedule;
 use App\Models\Session;
 use App\Models\User;
+use Carbon\Carbon;
 
 class SpecialScheduleController extends Controller
 {
@@ -80,4 +81,32 @@ class SpecialScheduleController extends Controller
             'sessions' => $formattedSessions
         ]);
     }
+
+    public function filterExamSchedule($userId) 
+{
+    // 1. Find the student and their enrolled course IDs [cite: 129]
+    $user = User::findOrFail($userId);
+    $studentCourseIds = $user->courses()->pluck('courses.id');
+
+    // 2. Find the latest "exam" type master schedule [cite: 22, 124]
+    $latestExamSchedule = Schedule::where('type', 'exam')->latest()->first();
+
+    if (!$latestExamSchedule) {
+        return response()->json(['message' => 'No exam schedule found.'], 404);
+    }
+
+    // 3. Fetch only the sessions matching those courses and simplify the output [cite: 64, 120]
+    $tasks = Session::where('schedule_id', $latestExamSchedule->id)
+        ->whereIn('course_id', $studentCourseIds)
+        ->with('course')
+        ->get()
+        ->map(function ($session) {
+            return [
+                'exam_name' => $session->course->name, // Displays only the name [cite: 23, 27]
+                'date' => Carbon::parse($session->date)->format('d/m/Y') // Displays only the day/date [cite: 22, 122]
+            ];
+        });
+
+    return response()->json($tasks);
+}
 }

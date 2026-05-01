@@ -25,6 +25,7 @@ Route::delete('sessions/{id}',[ScheduleController::class,'destroySession']);
 
 use App\Http\Controllers\SpecialScheduleController;
 Route::get('/my-schedule/{userId}', [SpecialScheduleController::class, 'getMySchedule']);
+Route::get('/upcoming-exams/{id}', [SpecialScheduleController::class, 'filterExamSchedule']);
 
 
 use App\Http\Controllers\HallController;

@@ -72,6 +72,15 @@ class ScheduleGenerator {
         $times = ['08:00:00', '09:30:00', '11:00:00', '12:30:00', '14:00:00', '15:30:00','17:00:00'];
         shuffle($days);
 
+        $startDate = Carbon::parse('2026-06-21'); 
+        $dayOffsets = [
+           'Sunday'    => 0,
+           'Monday'    => 1,
+           'Tuesday'   => 2,
+           'Wednesday' => 3,
+           'Thursday'  => 4,
+    ];
+
         foreach ($days as $day) {
             $alreadyOnDay = Session::where('schedule_id', $schedule->id)
                 ->where('course_id', $course->id)
@@ -95,10 +104,13 @@ class ScheduleGenerator {
                 }
 
                 if (!$hasStudentConflict && !$hasTeacherConflict) {
+                    $calculatedDate=$startDate->copy()->addDays($dayOffsets[$day]);
+
                     $lastCreatedSession = Session::create([
                         'schedule_id' => $schedule->id,
                         'course_id'   => $course->id,
                         'day'         => $day,
+                        'date'        =>$calculatedDate,
                         'start_time'  => $time,
                         'end_time'    => date('H:i:s', strtotime($time . ' +90 minutes')),
                         'hall_id'     => $hallId, // Assigned for courses, null for exams (exams use pivot table)

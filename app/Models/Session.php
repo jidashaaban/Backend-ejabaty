@@ -13,6 +13,7 @@ class Session extends Model
         'schedule_id', 
         'course_id', 
         'day', 
+        'date',
         'start_time', 
         'end_time',
         'hall_id',
