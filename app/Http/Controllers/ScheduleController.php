@@ -29,58 +29,72 @@ class ScheduleController extends Controller
     }
 
     public function index(Request $request)
-    {
-        $type = $request->query('type', 'course');
+{
+    // 1. Determine type (course or exam)
+    $type = $request->query('type', 'course');
 
-        $schedule = Schedule::where('type', $type)->latest()->first();
+    // 2. Fetch the latest schedule of that type
+    $schedule = \App\Models\Schedule::where('type', $type)->latest()->first();
 
-        if (!$schedule) {
-            return response()->json([
-                'success' => false,
-                'sessions' => [],
-                'message' => "No $type schedule found."
-            ]);
-        }
-
-        $schedule->load(['sessions.hall', 'sessions.course', 'sessions.hallAssignments.hall']);
-
-        // Map each session into a simple associative array. Use values() at the end to
-        // reset the numeric keys so that the returned JSON is encoded as a proper
-        // list/array instead of an object with string keys. Without calling
-        // values(), Laravel will preserve the original collection keys (e.g., 0, 1,
-        // etc.) which end up as string properties in the JSON response. On the
-        // client side, axios interprets objects differently and calling
-        // sessions.map(...) would fail because map is not defined on plain
-        // objects. Using values() ensures that the JSON `sessions` field is an
-        // array and can be iterated over safely in the frontend.
-        $sessions = $schedule->sessions
-            ->map(function ($session) {
-                return [
-                    'id'         => $session->id,
-                    'day'        => $session->day,
-                    'start_time' => $session->start_time,
-                    'end_time'   => $session->end_time,
-                    'course'     => $session->course ? [
-                        'id'         => $session->course->id,
-                        'name'       => $session->course->name,
-                        'teacher_id' => $session->course->teacher_id,
-                    ] : null,
-                    'course_id'  => $session->course_id,
-                    'hall'       => $session->hall ? [
-                        'id'   => $session->hall->id,
-                        'name' => $session->hall->name,
-                    ] : null,
-                    'hall_id'    => $session->hall_id,
-                ];
-            })
-            ->values();
-
+    if (!$schedule) {
         return response()->json([
-            'success'  => true,
-            'type'     => $type,
-            'sessions' => $sessions,
-        ]);
+            'success' => false,
+            'message' => "No $type schedule found."
+        ], 404);
     }
+
+    // 3. Define the Grid Constraints (Sunday-Thursday, 8am-3pm)
+    $days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday'];
+    // We match the time slots used in your generator logic
+    $timeSlots = ['08:00:00', '09:30:00', '11:00:00', '12:30:00', '14:00:00', '15:30:00'];
+
+    // 4. Eager load everything needed, including the hall assignments for exams
+    $schedule->load(['sessions.course', 'sessions.hall', 'sessions.hallAssignments.hall']);
+
+    $masterGrid = [];
+
+    foreach ($days as $day) {
+        foreach ($timeSlots as $time) {
+            // Find the session for this specific slot
+            $session = $schedule->sessions
+                ->where('day', $day)
+                ->filter(fn($s) => str_starts_with($s->start_time, $time))
+                ->first();
+
+            if ($session) {
+                // Determine Hall display: List all halls for exams, or one for courses
+                $halls = [];
+                if ($type === 'exam') {
+                    // Pull all hall names from the hallAssignments bridge
+                    $halls = $session->hallAssignments->pluck('hall.name')->unique()->values()->toArray();
+                } else {
+                    $halls = $session->hall ? [$session->hall->name] : ['Unassigned'];
+                }
+
+                $masterGrid[$day][$time] = [
+                    'session_id'  => $session->id,
+                    'course_name' => $session->course->name ?? 'Unknown',
+                    'halls'       => $halls,
+                    'start_time'  => $session->start_time,
+                    'end_time'    => $session->end_time,
+                    'status'      => 'Occupied'
+                ];
+            } else {
+                $masterGrid[$day][$time] = [
+                    'status' => 'Empty'
+                ];
+            }
+        }
+    }
+
+    return response()->json([
+        'success'       => true,
+        'schedule_type' => $type,
+        'schedule_id'   => $schedule->id,
+        'generated_at'  => $schedule->created_at->format('Y-m-d H:i'),
+        'master_grid'   => $masterGrid
+    ]);
+}
 
     public function store(Request $request, HallAssigner $hallAssigner)
     {
