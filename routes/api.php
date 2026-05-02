@@ -13,6 +13,8 @@ use Illuminate\Support\Facades\Route;
 | be assigned to the "api" middleware group. Make something great!
 |
 */
+use App\Http\Controllers\AuthController;
+Route::post('/login',[AuthController::class,'login']);
 
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
@@ -26,7 +28,9 @@ Route::delete('sessions/{id}',[ScheduleController::class,'destroySession']);
 use App\Http\Controllers\SpecialScheduleController;
 Route::get('/my-schedule/{userId}', [SpecialScheduleController::class, 'getMySchedule']);
 Route::get('/upcoming-exams/{id}', [SpecialScheduleController::class, 'filterExamSchedule']);
-
+Route::middleware('auth:sanctum')->group(function(){
+    Route::get('/my-schedule',[SpecialScheduleController::class,'index']);
+});
 
 use App\Http\Controllers\HallController;
 Route::post('/setup-halls', [HallController::class, 'store']);

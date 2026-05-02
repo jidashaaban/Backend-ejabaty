@@ -109,4 +109,37 @@ class SpecialScheduleController extends Controller
 
     return response()->json($tasks);
 }
+    public function index(Request $request)
+    {
+        
+        $user = $request->user(); 
+        $type = $request->query('type', 'course'); 
+
+        
+        $masterSchedule = Schedule::where('type', $type)->latest()->first();
+
+        if (!$masterSchedule) {
+            return response()->json(['message' => 'No master schedule found'], 404);
+        }
+
+        
+        $query = $masterSchedule->sessions()->with(['course', 'hall']);
+
+        if ($user->role === 'student') {
+            $query->whereHas('course.students', function ($q) use ($user) {
+                $q->where('users.id', $user->id);
+            });
+        } elseif ($user->role === 'teacher') {
+            $query->whereHas('course', function ($q) use ($user) {
+                $q->where('teacher_id', $user->id);
+            });
+        }
+
+        return response()->json([
+            'success' => true,
+            'user' => $user->name,
+            'data' => $query->get()
+        ]);
+    }
+
 }
