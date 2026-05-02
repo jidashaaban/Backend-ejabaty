@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\Complaint; 
 use App\Models\User;
+use App\Notifications\SchoolNotification;
 
 class ComplaintController extends Controller
 {
@@ -27,12 +28,20 @@ class ComplaintController extends Controller
             'subject' => $request->subject,
             'complaint_text' => $request->complaint_text,
         ]);
+        $admins = User::where('role', 'admin')->get();
+        foreach ($admins as $admin) {
+        $admin->notify(new SchoolNotification(
+            "New Parent Complaint",
+            "A parent has submitted a complaint regarding: " . $request->subject,
+            "new_complaint"
+        ));
+    }
 
         return response()->json(['success' => true, 'message' => 'Complaint sent to administration.', 'complaint' => $complaint]);
     }
 
     // Parent views their complaints and admin answers
-    public function viewComplaints($parentId)
+    public function viewComplaints(Request $request,$parentId)
     {
         $requester = User::find($request->query('requester_id'));
 
@@ -80,6 +89,15 @@ class ComplaintController extends Controller
             'admin_id' => $adminId,
             'answer_text' => $request->answer_text,
         ]);
+
+        $parent = User::find($complaint->parent_id);
+        if ($parent) {
+        $parent->notify(new SchoolNotification(
+            "Complaint Answered",
+            "The administration has responded to your inquiry: " . $complaint->subject,
+            "complaint_response"
+        ));
+    }
 
         return response()->json(['success' => true, 'message' => 'Complaint answered successfully.']);
     }

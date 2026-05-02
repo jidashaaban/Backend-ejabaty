@@ -8,7 +8,7 @@ use App\Models\Schedule;
 
 class ParentDashboardController extends Controller
 {
-    public function getChildProgress($parentId, $childId)
+    public function getChildProgress(Request $request, $parentId, $childId)
     {
         $requester = User::find($request->query('requester_id'));
 
@@ -53,7 +53,7 @@ class ParentDashboardController extends Controller
         ]);
     }
 
-    public function getChildExamSchedule($parentId, $childId)
+    public function getChildExamSchedule(Request $request, $parentId, $childId)
     {
         $requester = User::find($request->query('requester_id'));
 

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\Exam;
 use App\Models\User; 
+use App\Notifications\SchoolNotification;
 
 class AdminMarkController extends Controller
 {
@@ -33,6 +34,20 @@ class AdminMarkController extends Controller
         $exam->students()->syncWithoutDetaching([
             $request->student_id => ['mark' => $request->mark]
         ]);
+        $student = User::find($request->student_id);
+        $courseName = $exam->course ? $exam->course->name : 'your recent exam';
+        $student->notify(new SchoolNotification(
+            "New Exam Grade Released",
+            "Your mark for $courseName has been submitted. Your grade: " . $request->mark . "%",
+            "exam_result"
+        ));
+        foreach ($student->parents as $parent) {
+        $parent->notify(new SchoolNotification(
+            "Child Progress Update",
+            "A new grade has been posted for " . $student->name . " in $courseName. Grade: " . $request->mark . "%",
+            "child_grade_alert"
+        ));
+    }
 
         return response()->json([
             'message' => 'Student mark submitted successfully!',

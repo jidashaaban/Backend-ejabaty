@@ -7,7 +7,8 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\Rule; // Import this!
+use Illuminate\Validation\Rule; 
+use App\Notifications\SchoolNotification;
 
 class UserController extends Controller
 {
@@ -54,7 +55,20 @@ class UserController extends Controller
 
                 if ($user->role === 'parent') {
                     $user->children()->attach($request->student_ids);
+
+                    foreach ($request->student_ids as $studentId) {
+                    $student = User::find($studentId);
+                    if ($student) {
+                          $student->notify(new SchoolNotification(
+                             "Parent Account Linked",
+                             "A parent account ($user->name) has been linked to your profile.",
+                             "parent_link"
+                ));
+                
+            }
+        }
                 }
+
 
                 return response()->json([
                     'success' => true,

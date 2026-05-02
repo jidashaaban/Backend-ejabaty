@@ -92,3 +92,9 @@ Route::get('/admin/reports/history', function() {
 
 use App\Http\Controllers\Admin\UserController;
 Route::post('/admin/users', [UserController::class, 'store']);
+
+use App\Http\Controllers\NotificationController;
+// URL: /api/notifications/5?requester_id=5
+Route::get('/notifications/{userId}', [NotificationController::class, 'index']);
+// URL: /api/notifications/5/some-uuid-string/read?requester_id=5
+Route::post('/notifications/{userId}/{notificationId}/read', [NotificationController::class, 'markAsRead']);

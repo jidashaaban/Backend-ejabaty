@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Poll;
+use App\Models\User;
+use App\Notifications\SchoolNotification;
 
 class PollController extends Controller
 {
@@ -31,7 +33,15 @@ class PollController extends Controller
         foreach ($request->options as $optionText) {
             $poll->options()->create(['option_text' => $optionText]);
         }
+        $usersToNotify = User::whereIn('role', 'student')->get();
 
+        foreach ($usersToNotify as $user) {
+            $user->notify(new SchoolNotification(
+               "New Poll Available!",
+               "The Admin has posted a new poll: " . $poll->question,
+               "new_poll"
+        ));
+    }
         return response()->json([
             'success' => true,
             'message' => 'Poll created successfully!',

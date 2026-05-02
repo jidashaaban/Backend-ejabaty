@@ -10,6 +10,10 @@ use Illuminate\Support\Facades\Auth;
 class ReportController extends Controller
 {
     public function getUserReports(Request $request){
+        $requester = User::find($request->query('requester_id'));
+        if (!$requester || $requester->role !== 'admin') {
+            return response()->json(['message' => 'Forbidden: Admin only.'], 403);
+    }
         $role = $request->query('role');
         $validRoles = ['student','teacher','parent','admin'];
         if(!in_array($role,$validRoles)){

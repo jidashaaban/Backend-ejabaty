@@ -7,6 +7,8 @@ use Illuminate\Http\Request;
 use App\Models\Quiz;
 use App\Models\Session;
 use App\Models\Courses;
+use App\Models\User;
+use App\Notifications\SchoolNotification;
 use Carbon\Carbon;
 
 class QuizController extends Controller
@@ -79,6 +81,14 @@ class QuizController extends Controller
             'start_time' => $request->start_time,
             'included_content' => $request->included_content,
         ]);
+        $course = Courses::with('students')->find($request->course_id);
+        foreach ($course->students as $student) {
+        $student->notify(new SchoolNotification(
+            "Upcoming Quiz!",
+            "A new quiz for '" . $course->name . "' has been scheduled for " . $request->quiz_date,
+            "quiz_announcement"
+        ));
+    }
 
         return response()->json([
             'success' => true,
@@ -90,6 +100,13 @@ class QuizController extends Controller
     // 2. Student Views Upcoming Quizzes
     public function studentUpcomingQuizzes($studentId)
     {
+        $requester = User::find($request->query('requester_id'));
+
+        if (!$requester || $requester->role !== 'student') {
+             return response()->json([
+                 'message' => 'Forbidden: You can only access your own records'
+    ], 403);
+}
         // Get all course IDs that the student is enrolled in
         $studentCourseIds = \DB::table('user_course')
             ->where('user_id', $studentId)
@@ -141,11 +158,26 @@ class QuizController extends Controller
             'comment' => $request->comment
         ]
      ]);
+        $student = User::find($request->student_id);
+        if ($student) {
+           $student->notify(new SchoolNotification(
+               "Quiz Result Published",
+               "Your marks for the quiz in '" . $quiz->course->name . "' are now available. Points: " . $request->points,
+               "quiz_mark"
+        ));
+    }
      return response()->json(['message' => 'Points and comment added successfully!']);
 
     }
 
     public function getPastQuizzes($studentId) {
+        $requester = User::find($request->query('requester_id'));
+
+        if (!$requester || $requester->role !== 'student') {
+            return response()->json([
+               'message' => 'Forbidden: You can only access your own records.'
+    ], 403);
+} 
     // 1. Get IDs of courses the student is enrolled in
     $enrolledCourseIds = DB::table('user_course') // or course_student
         ->where('user_id', $studentId)

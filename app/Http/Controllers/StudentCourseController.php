@@ -58,13 +58,29 @@ class StudentCourseController extends Controller
         'status' => 'pending_payment',
         'booked_at' => now(),
     ]);
+    $student->notify(new SchoolNotification(
+        "Course Seat Reserved",
+        "You have booked a seat in " . $course->name . ". Please visit the administration within 24 hours to complete your payment.",
+        "course_joined_pending"
+    ));
+
+    // 2. Notify the Parent
+    // We load the parents relationship to find who to alert
+    $student->load('parents');
+    foreach ($student->parents as $parent) {
+        $parent->notify(new SchoolNotification(
+            "New Course Booking",
+            $student->name . " has reserved a seat in " . $course->name . ". Payment is required within 24 hours.",
+            "child_course_booking"
+        ));
+    }
 
     return response()->json([
         'message' => 'your seat is booked in this course you have 24 hours to come and pay in person'
     ]);
 }
 
-public function myCourses($studentId)
+public function myCourses(Request $request, $studentId)
     {
         $requester = User::find($request->query('requester_id'));
 

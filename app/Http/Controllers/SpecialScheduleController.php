@@ -89,8 +89,12 @@ class SpecialScheduleController extends Controller
         ]);
     }
 
-    public function filterExamSchedule($userId) 
+    public function filterExamSchedule(Request $request,$userId) 
 {
+    $requester = User::find($request->query('requester_id'));
+    if (!$requester || $requester->id != $userId) {
+        return response()->json(['message' => 'Unauthorized'], 403);
+    }
     // 1. Find the student and their enrolled course IDs [cite: 129]
     $user = User::findOrFail($userId);
     $studentCourseIds = $user->courses()->pluck('courses.id');

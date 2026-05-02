@@ -4,10 +4,11 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\Question; 
+use App\Models\User;
 
 class TeacherQuestionController extends Controller
 {
-    public function pendingQuestions($teacherId)
+    public function pendingQuestions(Request $request,$teacherId)
     {
         $requester = User::find($request->query('requester_id'));
 
@@ -49,6 +50,20 @@ class TeacherQuestionController extends Controller
             'answer' => $request->answer,
             'is_answered' => true
         ]);
+        // --- NOTIFICATION LOGIC ---
+       // 1. Find the Student who asked the question
+       $student = User::find($question->student_id);
+    
+       // 2. Find the Teacher (for the message)
+       $teacher = User::find($request->query('requester_id'));
+
+       if ($student) {
+           $student->notify(new SchoolNotification(
+               "Question Answered!",
+               "Teacher " . ($teacher->name ?? 'assigned to the course') . " has responded to your question.",
+               "question_answered"
+        ));
+    }
 
         return response()->json(['message' => 'Answer submitted successfully!', 'data' => $question]);
     }

@@ -29,6 +29,27 @@ class ScheduleController extends Controller
         if (!$session) {
             return response()->json(['success' => false, 'message' => 'Session not found'], 404);
         }
+        $courseName = $session->course->name;
+        $day = $session->day;
+        $time = $session->start_time;
+
+        // 1. Notify the Teacher
+        if ($session->course->teacher) {
+            $session->course->teacher->notify(new SchoolNotification(
+               "Session Cancelled",
+               "Your session for $courseName on $day at $time has been removed.",
+               "session_deleted"
+        ));
+    }
+
+        // 2. Notify all Students in that course
+        foreach ($session->course->students as $student) {
+        $student->notify(new SchoolNotification(
+            "Class Update",
+            "The session for $courseName on $day ($time) has been cancelled by the admin.",
+            "session_deleted"
+        ));
+    }
 
         $session->delete();
 
@@ -134,7 +155,17 @@ class ScheduleController extends Controller
                 // will only see the course_id but not the course name.
                 $schedule->load(['sessions.hall', 'sessions.course']);
             }
+            $usersToNotify = User::whereIn('role', ['student', 'teacher'])->get();
+        
+            $typeName = ($request->type === 'exam') ? 'Exam' : 'Course';
 
+            foreach ($usersToNotify as $user) {
+                $user->notify(new SchoolNotification(
+                   "New $typeName Schedule Live!",
+                   "The administration has published the latest $typeName schedule. Please check your dashboard for updates.",
+                   "schedule_published"
+            ));
+        }
             // 4. Return everything in a single, clean JSON response
             return response()->json([
                 'success' => true,

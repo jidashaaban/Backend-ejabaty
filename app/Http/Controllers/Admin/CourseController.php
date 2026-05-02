@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Courses;
 use App\Models\User;
+use App\Notifications\SchoolNotification;
 
 class CourseController extends Controller
 {
@@ -30,6 +31,24 @@ class CourseController extends Controller
         // 2. Create the course in the database
         $course = Courses::create($validatedData);
 
+        $teacher = User::find($course->teacher_id);
+        if ($teacher) {
+              $teacher->notify(new SchoolNotification(
+                 "New Course Assigned",
+                 "You have been assigned to teach: " . $course->name,
+                 "course_assignment"
+        ));
+    }
+        $students = User::where('role', 'student')->get();
+
+        foreach ($students as $student) {
+             $student->notify(new SchoolNotification(
+                 "New Course Available!",
+                 "The course '" . $course->name . "' (Code: " . $course->code . ") is now open for enrollment. Check it out!",
+                 "new_course_alert"
+        ));
+    }
+
         // 3. Return a success message
         return response()->json([
             'message' => 'New course added and announced successfully!',
@@ -52,6 +71,11 @@ class CourseController extends Controller
         $student->courses()->updateExistingPivot($request->course_id, [
             'status' => 'paid'
         ]);
+        $student->notify(new SchoolNotification(
+            "Payment Confirmed!",
+            "Your seat in " . $course->name . " is now officially booked.",
+            "payment_success"
+        ));
 
         return response()->json([
             'message' => 'Payment confirmed! The seat is now permanently booked for this student.'

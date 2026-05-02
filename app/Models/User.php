@@ -69,6 +69,12 @@ class User extends Authenticatable
         return $this->hasMany(Schedule::class, 'admin_id');
     }
 
+    public function parents()
+{
+    // Assuming you used a pivot table named 'parent_student'
+    return $this->belongsToMany(User::class, 'parent_student', 'student_id', 'parent_id');
+}
+
     
 
     use HasApiTokens, HasFactory, Notifiable;

@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\Question; 
+use App\Models\User;
+use App\Notifications\SchoolNotification;
 
 class StudentQuestionController extends Controller
 {
@@ -27,12 +29,25 @@ class StudentQuestionController extends Controller
             'teacher_id' => $request->teacher_id,
             'question' => $request->question
         ]);
+        // 1. Find the Teacher who needs to answer
+        $teacher = User::find($request->teacher_id);
+    
+    // 2. Find the Student who is asking (for the message)
+        $student = User::find($request->student_id);
+
+        if ($teacher && $student) {
+            $teacher->notify(new SchoolNotification(
+               "New Student Question",
+               $student->name . " has sent you a new question regarding your course.",
+               "student_question"
+        ));
+    }
 
         return response()->json(['message' => 'Question sent successfully!', 'data' => $question]);
     }
 
     // 2. Student views their asked questions and the answers
-    public function myQuestions($studentId)
+    public function myQuestions(Request $request,$studentId)
     {
         $requester = User::find($request->query('requester_id'));
 

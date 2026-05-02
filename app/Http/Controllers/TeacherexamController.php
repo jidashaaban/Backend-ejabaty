@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use App\Models\Exam;
 use App\Models\Courses; // Keep as Courses based on your previous error message
 use App\Models\ExamQuestion;
+use App\Models\User;
 
 class TeacherexamController extends Controller
 {
@@ -60,6 +61,17 @@ class TeacherexamController extends Controller
             $exam->questions()->attach($question->id);
         }
 
+        // Fetch students enrolled in this course
+         $course = Courses::with('students')->find($request->course_id);
+
+        foreach ($course->students as $student) {
+           $student->notify(new SchoolNotification(
+               "New Exam Created",
+               "An exam has been scheduled for " . $course->name . ": " . $request->title,
+               "exam_created"
+        ));
+    }
+
         return response()->json([
             'message' => 'Exam and questions created successfully!', 
             'exam' => $exam->load('questions')
@@ -70,7 +82,7 @@ class TeacherexamController extends Controller
      * STAGE 2: RETRIEVE THE EXAM
      * Teacher gets the exam to start adding answers.
      */
-    public function getExamForMarking($teacherId, $examId)
+    public function getExamForMarking(Request $request,$teacherId, $examId)
     {
         $requester = User::find($request->query('requester_id'));
 
@@ -132,6 +144,17 @@ class TeacherexamController extends Controller
 
         // Once answers are saved, publish the exam so students can see it
         $exam->update(['is_published' => true]);
+
+        // --- NOTIFICATION LOGIC ---
+        $exam->load('course.students'); // Get everyone in the class
+    
+        foreach ($exam->course->students as $student) {
+            $student->notify(new SchoolNotification(
+                "Marking Scheme Available",
+                "The correct answers for '" . $exam->title . "' are now live. Check your dashboard to review.",
+                "marking_scheme_published"
+        ));
+    }
 
         return response()->json([
             'message' => 'Marking scheme submitted successfully!'

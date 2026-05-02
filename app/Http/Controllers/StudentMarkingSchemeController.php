@@ -8,9 +8,16 @@ use App\Models\Exam;
 
 class StudentMarkingSchemeController extends Controller
 {
-    public function getMyExamsAndMarks($studentId)
+    public function getMyExamsAndMarks(Request $request,$studentId)
     {
-        
+        $requester = User::find($request->query('requester_id'));
+
+    // Ensure the requester is a student AND they are looking at THEIR OWN data
+    if (!$requester || $requester->role !== 'student' || $requester->id != $studentId) {
+        return response()->json([
+            'message' => 'Unauthorized: You can only view your own marking schemes.'
+        ], 403);
+    }
         // 1. Find the student and their exams (including the pivot 'mark')
         $student = User::with(['exams' => function($query) {
             // Only get exams that are published

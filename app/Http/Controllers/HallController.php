@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use App\Models\Hall;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\DB;
+use App\Models\User;
 
 class HallController extends Controller
 {
