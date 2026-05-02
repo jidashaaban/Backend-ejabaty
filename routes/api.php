@@ -77,3 +77,9 @@ Route::get('/parent/{parentId}/child/{childId}/exam-schedule', [ParentDashboardC
 Route::post('/parent/{parentId}/complaints/submit', [ComplaintController::class, 'submitComplaint']);
 Route::get('/parent/{parentId}/complaints', [ComplaintController::class, 'viewComplaints']);
 Route::post('/admin/{adminId}/complaints/{complaintId}/answer', [ComplaintController::class, 'answerComplaint']);
+
+use App\Http\Controllers\ReportController;
+Route::get('/admin/reports',[ReportController::class,'getUserReports']);
+
+use App\Http\Controllers\Admin\UserController;
+Route::post('/admin/users', [UserController::class, 'store']);
