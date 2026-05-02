@@ -15,6 +15,13 @@ class TeacherexamController extends Controller
      */
     public function createExam(Request $request, $teacherId)
     {
+        $requester = User::find($request->query('requester_id'));
+
+        if (!$requester || $requester->role !== 'teacher') {
+                return response()->json([
+                    'message' => 'Forbidden: Only Teachers can access this feature.'
+    ], 403);
+}
         // 1. First, check if the course exists at all
         $course = Courses::find($request->course_id);
 
@@ -65,6 +72,13 @@ class TeacherexamController extends Controller
      */
     public function getExamForMarking($teacherId, $examId)
     {
+        $requester = User::find($request->query('requester_id'));
+
+        if (!$requester || $requester->role !== 'teacher') {
+           return response()->json([
+                'message' => 'Forbidden: Only Teachers can access this feature.'
+    ], 403);
+}
         // Find the exam and ensure the teacher owns the parent course
         $exam = Exam::where('id', $examId)
             ->whereHas('course', function($q) use ($teacherId) {
@@ -88,6 +102,13 @@ class TeacherexamController extends Controller
      */
     public function submitMarkingScheme(Request $request, $examId)
     {
+        $requester = User::find($request->query('requester_id'));
+
+        if (!$requester || $requester->role !== 'teacher') {
+               return response()->json([
+                   'message' => 'Forbidden: Only Teachers can access this feature.'
+    ], 403);
+}
         // 1. Find the exam and check authorization
         $exam = Exam::with('course')->findOrFail($examId);
         

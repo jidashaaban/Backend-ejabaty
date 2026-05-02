@@ -14,6 +14,13 @@ class QuizController extends Controller
     // 1. Teacher Announces the Quiz
     public function announceQuiz(Request $request)
     {
+        $requester = User::find($request->query('requester_id'));
+
+        if (!$requester || $requester->role !== 'teacher') {
+                 return response()->json([
+                      'message' => 'Forbidden: Only Teachers can access this feature.'
+    ], 403);
+}
         $request->validate([
             'course_id' => 'required|exists:courses,id',
             'teacher_id' => 'required|exists:users,id',
@@ -110,6 +117,13 @@ class QuizController extends Controller
     }
 
     public function addQuizMarks(Request $request){
+        $requester = User::find($request->query('requester_id'));
+
+        if (!$requester || $requester->role !== 'teacher') {
+             return response()->json([
+                'message' => 'Forbidden: Only Teachers can access this feature.'
+    ], 403);
+}
         $request->validate([
             'quiz_id'=>'required|exists:quizzes,id',
             'student_id'=>'required|exists:users,id',

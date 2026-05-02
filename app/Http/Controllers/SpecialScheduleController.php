@@ -12,6 +12,13 @@ class SpecialScheduleController extends Controller
 {
     public function getMySchedule(Request $request, $userId)
     {
+        $requester = User::find($request->query('requester_id'));
+
+        if (!$requester || !in_array($requester->role, ['student', 'teacher'])) {
+              return response()->json([
+                 'message' => 'Unauthorized: Please provide a valid Student or Teacher ID.'
+    ], 403);
+}
         $user = User::find($userId);
         
         if (!$user) {
@@ -111,34 +118,62 @@ class SpecialScheduleController extends Controller
 }
     public function index(Request $request)
     {
-        
+        // SECURE: Automatically detects user from the Bearer Token
         $user = $request->user(); 
-        $type = $request->query('type', 'course'); 
-
+        $type = $request->query('type', 'course');
         
-        $masterSchedule = Schedule::where('type', $type)->latest()->first();
+        $masterScheduleId = Schedule::where('type', $type)->latest()->value('id');
 
-        if (!$masterSchedule) {
-            return response()->json(['message' => 'No master schedule found'], 404);
+        if (!$masterScheduleId) {
+            return response()->json(['message' => "No $type schedule found."], 404);
         }
 
-        
-        $query = $masterSchedule->sessions()->with(['course', 'hall']);
+        $sessionsQuery = Session::where('schedule_id', $masterScheduleId);
 
         if ($user->role === 'student') {
-            $query->whereHas('course.students', function ($q) use ($user) {
-                $q->where('users.id', $user->id);
+            $sessionsQuery->whereHas('course.students', function($query) use ($user) {
+                $query->where('users.id', $user->id);
             });
+
+            if ($type === 'course') {
+                $sessionsQuery->with(['course', 'hall']);
+            } else {
+                // Gets student-specific exam hall assignments
+                $sessionsQuery->with(['course', 'hallAssignments' => function($query) use ($user) {
+                    $query->where('student_id', $user->id)->with('hall');
+                }]);
+            }
         } elseif ($user->role === 'teacher') {
-            $query->whereHas('course', function ($q) use ($user) {
-                $q->where('teacher_id', $user->id);
-            });
+            $sessionsQuery->whereHas('course', function($query) use ($user) {
+                $query->where('teacher_id', $user->id);
+            })->with(['course', 'hall']); 
         }
+
+        $sessions = $sessionsQuery->get();
+
+        $formattedSessions = $sessions->map(function($session) use ($user, $type) {
+            $hallName = 'No Hall Assigned';
+            if ($type === 'course') {
+                $hallName = $session->hall->name ?? 'No Hall Assigned';
+            } else {
+                $hallName = $session->hallAssignments->first()->hall->name ?? 'Check Hall List';
+            }
+
+            return [
+                'id' => $session->id,
+                'course' => $session->course->name,
+                'day' => $session->day,
+                'date' => $session->date ? Carbon::parse($session->date)->format('d/m/Y') : null,
+                'start_time' => $session->start_time,
+                'end_time' => $session->end_time,
+                'hall' => ($user->role === 'teacher' && $type === 'exam') ? 'Check Hall List' : $hallName,
+            ];
+        });
 
         return response()->json([
             'success' => true,
-            'user' => $user->name,
-            'data' => $query->get()
+            'viewing_as' => ['name' => $user->name, 'role' => $user->role],
+            'sessions' => $formattedSessions
         ]);
     }
 

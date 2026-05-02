@@ -19,6 +19,13 @@ class ScheduleGenerator {
     
     public function generate($type) {
         set_time_limit(120); 
+        $requester = User::find($request->query('requester_id'));
+
+        if (!$requester || $requester->role !== 'admin') {
+               return response()->json([
+                   'message' => 'Forbidden: Only Administrators can perform this action.'
+    ], 403);
+}
 
         // 1. CLEAN OLD DATA
         $schedule = Schedule::where('type', $type)->first();

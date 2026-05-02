@@ -10,6 +10,13 @@ class ComplaintController extends Controller
 {
     public function submitComplaint(Request $request, $parentId)
     {
+        $requester = User::find($request->query('requester_id'));
+
+        if (!$requester || $requester->role !== 'parent') {
+             return response()->json([
+                 'message' => 'Forbidden: Only Parents can view this dashboard.'
+    ], 403);
+}
         $request->validate([
             'subject' => 'required|string',
             'complaint_text' => 'required|string',
@@ -27,6 +34,13 @@ class ComplaintController extends Controller
     // Parent views their complaints and admin answers
     public function viewComplaints($parentId)
     {
+        $requester = User::find($request->query('requester_id'));
+
+        if (!$requester || $requester->role !== 'parent') {
+             return response()->json([
+                 'message' => 'Forbidden: Only Parents can view this dashboard.'
+    ], 403);
+}
         $complaints = Complaint::where('parent_id', $parentId)->get();
         return response()->json(['success' => true, 'complaints' => $complaints]);
     }
@@ -34,6 +48,13 @@ class ComplaintController extends Controller
     // Admin answers a complaint
     public function answerComplaint(Request $request, $adminId, $complaintId)
     {
+        $requester = User::find($request->query('requester_id'));
+
+          if (!$requester || $requester->role !== 'admin') {
+              return response()->json([
+                 'message' => 'Forbidden: Only Administrators can perform this action.'
+    ], 403);
+}
         $admin = User::where('id', $adminId)->where('role', 'admin')->first();
     
     if (!$admin) {

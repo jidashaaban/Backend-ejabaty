@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\User; 
+use App\Models\Report;
+use Illuminate\Support\Facades\Auth;
 
 class ReportController extends Controller
 {
@@ -73,4 +75,78 @@ class ReportController extends Controller
             'reports' => $data
         ]);
     }
+    public function generateAndSaveReport(Request $request)
+{
+    // 1. Identify who is making the request
+    $requesterId = $request->query('requester_id'); 
+    $admin = \App\Models\User::find($requesterId);
+
+    // 2. Security: Verify the user exists AND is an administrator
+    if (!$admin || $admin->role !== 'admin') {
+        return response()->json([
+            'success' => false,
+            'message' => 'Unauthorized. Only admins can generate and save reports.'
+        ], 403);
+    }
+
+    $role = $request->query('role');
+    $reportContent = null;
+
+    // 3. Build the specific qualitative report content
+    if ($role === 'student') {
+        $reportContent = \App\Models\User::where('role', 'student')
+            ->with(['courses', 'exams', 'quizzes'])
+            ->get()
+            ->map(function ($student) {
+                return [
+                    'name' => $student->name,
+                    'courses' => $student->courses->pluck('name'),
+                    'marks' => $student->exams->map(fn($e) => ['course' => $e->course->name ?? 'N/A', 'mark' => $e->pivot->mark]),
+                    'quizzes' => $student->quizzes->map(fn($q) => ['points' => $q->pivot->points]),
+                ];
+            });
+    } 
+    elseif ($role === 'teacher') {
+        $reportContent = \App\Models\User::where('role', 'teacher')
+            ->with(['teacherCourses', 'announcedQuizzes'])
+            ->get()
+            ->map(function ($teacher) {
+                return [
+                    'name' => $teacher->name,
+                    'teaching' => $teacher->teacherCourses->pluck('name'),
+                    'quizzes_announced' => $teacher->announcedQuizzes->count(),
+                ];
+            });
+    } 
+    elseif ($role === 'parent') {
+        $reportContent = \App\Models\User::where('role', 'parent')
+            ->with(['children', 'complaints'])
+            ->get()
+            ->map(function ($parent) {
+                return [
+                    'name' => $parent->name,
+                    'children' => $parent->children->pluck('name'),
+                    'complaints_count' => $parent->complaints->count(),
+                ];
+            });
+    }
+
+    // 4. Check if we actually found any users to report on
+    if (!$reportContent || $reportContent->isEmpty()) {
+        return response()->json(['success' => false, 'message' => "No users found for category: $role"], 404);
+    }
+
+    // 5. SAVE to the database (Fixing the undefined variable here)
+    $savedReport = \App\Models\Report::create([
+        'admin_id'    => $admin->id,    // Corrected: Uses the $admin object from step 1
+        'category'    => $role,
+        'report_data' => $reportContent,
+    ]);
+
+    return response()->json([
+        'success' => true,
+        'message' => 'Historical ' . $role . ' report archived by Admin: ' . $admin->name,
+        'data' => $savedReport
+    ]);
+}
 }

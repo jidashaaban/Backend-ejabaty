@@ -17,6 +17,13 @@ class ScheduleController extends Controller
 
     public function destroySession($id)
     {
+        $requester = User::find($request->query('requester_id'));
+
+        if (!$requester || $requester->role !== 'admin') {
+           return response()->json([
+               'message' => 'Forbidden: Only Administrators can perform this action.'
+    ], 403);
+}
         $session = \App\Models\Session::find($id);
 
         if (!$session) {
@@ -98,6 +105,13 @@ class ScheduleController extends Controller
 
     public function store(Request $request, HallAssigner $hallAssigner)
     {
+        $requester = User::find($request->query('requester_id'));
+
+        if (!$requester || $requester->role !== 'admin') {
+            return response()->json([
+               'message' => 'Forbidden: Only Administrators can perform this action.'
+    ], 403);
+}
         // 1. Validate the incoming request
         $request->validate([
             'type' => 'required|in:exam,course'

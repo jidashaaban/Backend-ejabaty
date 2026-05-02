@@ -9,6 +9,13 @@ class HallAssigner
 {
     public function assignHallsToSchedule($scheduleId)
     {
+        $requester = User::find($request->query('requester_id'));
+
+        if (!$requester || $requester->role !== 'admin') {
+             return response()->json([
+                 'message' => 'Forbidden: Only Administrators can perform this action.'
+    ], 403);
+}
         // Fetch sessions with enrolled students [cite: 5, 8]
         $sessions = Session::with('course.students')->where('schedule_id', $scheduleId)->get();
         $halls = Hall::all();

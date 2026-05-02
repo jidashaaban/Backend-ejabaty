@@ -9,6 +9,13 @@ class StudentQuestionController extends Controller
 {
     public function askQuestion(Request $request)
     {
+        $requester = User::find($request->query('requester_id'));
+
+        if (!$requester || $requester->role !== 'student') {
+                 return response()->json([
+                    'message' => 'Forbidden: This is a Student-only area.'
+    ], 403);
+}
         $request->validate([
             'student_id' => 'required|exists:users,id',
             'teacher_id' => 'required|exists:users,id',
@@ -27,6 +34,13 @@ class StudentQuestionController extends Controller
     // 2. Student views their asked questions and the answers
     public function myQuestions($studentId)
     {
+        $requester = User::find($request->query('requester_id'));
+
+        if (!$requester || $requester->role !== 'student') {
+                  return response()->json([
+                       'message' => 'Forbidden: This is a Student-only area.'
+    ], 403);
+}
         $questions = Question::where('student_id', $studentId)
             ->with('teacher:id,name') // Get the teacher's name so the student knows who it was sent to
             ->orderBy('created_at', 'desc')

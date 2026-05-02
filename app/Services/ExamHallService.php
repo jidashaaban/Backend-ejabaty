@@ -11,6 +11,13 @@ class ExamHallService
 {
     public function distributeStudents($sessionId, $courseId)
     {
+        $requester = User::find($request->query('requester_id'));
+
+        if (!$requester || $requester->role !== 'admin') {
+             return response()->json([
+                 'message' => 'Forbidden: Only Administrators can perform this action.'
+    ], 403);
+}
         // 1. Fetch the Students enrolled in this course
         $students = Courses::find($courseId)->students;
         $totalStudents = $students->count();

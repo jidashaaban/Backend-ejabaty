@@ -10,6 +10,13 @@ class ParentDashboardController extends Controller
 {
     public function getChildProgress($parentId, $childId)
     {
+        $requester = User::find($request->query('requester_id'));
+
+        if (!$requester || $requester->role !== 'parent') {
+              return response()->json([
+                'message' => 'Forbidden: Only Parents can view this dashboard.'
+    ], 403);
+} 
         $parent =User::where('id',$parentId)->where('role','parent')->first();
         if(!$parent){
             return response()->json(['error'=>'Parent account not found'],404);
@@ -48,6 +55,13 @@ class ParentDashboardController extends Controller
 
     public function getChildExamSchedule($parentId, $childId)
     {
+        $requester = User::find($request->query('requester_id'));
+
+       if (!$requester || $requester->role !== 'parent') {
+              return response()->json([
+                 'message' => 'Forbidden: Only Parents can view this dashboard.'
+    ], 403);
+}
         $parent = User::where('id', $parentId)->where('role', 'parent')->first();
     
     if (!$parent) {

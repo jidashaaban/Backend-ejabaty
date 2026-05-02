@@ -10,6 +10,7 @@ class StudentMarkingSchemeController extends Controller
 {
     public function getMyExamsAndMarks($studentId)
     {
+        
         // 1. Find the student and their exams (including the pivot 'mark')
         $student = User::with(['exams' => function($query) {
             // Only get exams that are published

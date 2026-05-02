@@ -10,6 +10,13 @@ class AdminMarkController extends Controller
 {
     public function submitStudentMark(Request $request)
     {
+        $requester = User::find($request->query('requester_id'));
+
+        if (!$requester || $requester->role !== 'admin') {
+            return response()->json([
+              'message' => 'Forbidden: Only Administrators can perform this action.'
+    ], 403);
+}
         // 1. Validate the incoming request
         $request->validate([
             
