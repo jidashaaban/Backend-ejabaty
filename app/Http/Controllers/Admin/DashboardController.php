@@ -7,41 +7,51 @@ use Illuminate\Http\Request;
 use App\Models\User;
 use App\Models\Complaint;
 use App\Models\Poll;
+use App\Models\Courses; 
+use App\Models\Schedule;
+use App\Models\Session;
 use Illuminate\Support\Facades\DB;
 
 class DashboardController extends Controller
 {
-    public function index(){
-        $userBreakdown = [
-            'total'=>User::count(),
+    public function index(Request $request){
+        $stats = [
             'students'=>User::where('role','student')->count(),
             'teachers'=>User::where('role','teacher')->count(),
-            'admins'=>User::where('role','admin')->count(),
             'parents'=>User::where('role','parent')->count(),
+            'pending_complaints'=>Complaint::whereNull('answer_text')->count(),
+            'total_courses'=>Courses::count(),
+            'total_polls'=>Poll::count()
         ];
+        $type = $request->query('type','course');
 
-        $pendingComplaints = Complaint::whereNull('answer_text')->count();
-
-        $recentPoll = Poll::latest()->with(['options'=>function($query){
-            $query->withCount('votes');
-        }])->first();
-
-        $topStudents = User::where('role','student')
-                    ->withSum('quizzes as total_points','quiz_student.points')
-                    ->orderBy('total_points','desc')
-                    ->take(3)
-                    ->get(['id','name','total_points']);
-        
+        $scheduleGrid = $this->getFormattedMasterSchedule($type);
         return response()->json([
-            'user_breakdown'=> $userBreakdown,
-            'pending_complaints_count'=> $pendingComplaints,
-            'recent_poll'=> $recentPoll,
-            'leaderboard'=> $topStudents,
-            'quick_links'=>[
-                'generate_reports_url'=>'/api/admin/reports',
-                'master_schedule_url'=>'/api/admin-schedule?type=course',
-                'add_poll_url'=>'/api/admin/create-poll'
-            ]
+            'metrics'=> $stats,
+            'viewing_type'=> $type,
+            'master_schedule'=> $scheduleGrid,
         ]);
+    }
+    private function getFormattedMasterSchedule($type){
+        $schedule = Schedule::where('type',$type)->latest()->first();
+
+        if(!$schedule){
+            return null;
+        }
+        $sessions = Session::where('schedule_id',$schedule->id)
+               ->with('course:id,name,code')
+               ->get();
+        $grid = [];
+        foreach($sessions as $session){
+            $day = $session->day;
+            $time = $session->start_time;
+            $grid[$day][$time][]=[
+                'course_name'=>$session->course->name,
+                'course_code'=>$session->course->code,
+                'end_time'=>$session->end_time,
+                'hall'=>$session->hall_name ?? 'TBA'
+            ];
+        }   
+        return $grid;    
     }
 }
