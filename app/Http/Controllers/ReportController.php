@@ -10,8 +10,8 @@ use Illuminate\Support\Facades\Auth;
 class ReportController extends Controller
 {
     public function getUserReports(Request $request){
-        $requester = User::find($request->query('requester_id'));
-        if (!$requester || $requester->role !== 'admin') {
+        $admin = $request->user();
+        if (!$admin || $admin->role !== 'admin') {
             return response()->json(['message' => 'Forbidden: Admin only.'], 403);
     }
         $role = $request->query('role');
@@ -82,7 +82,7 @@ class ReportController extends Controller
     public function generateAndSaveReport(Request $request)
 {
     // 1. Identify who is making the request
-    $requesterId = $request->query('requester_id'); 
+    $requesterId = $request->user(); 
     $admin = \App\Models\User::find($requesterId);
 
     // 2. Security: Verify the user exists AND is an administrator

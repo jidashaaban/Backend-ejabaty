@@ -13,9 +13,13 @@ use Illuminate\Support\Facades\Route;
 | be assigned to the "api" middleware group. Make something great!
 |
 */
-use App\Http\Controllers\AuthController;
-Route::post('/login',[AuthController::class,'login']);
+use App\Http\Controllers\ReportController;
 
+use App\Http\Controllers\AuthController;
+use App\Http\Controllers\Admin\DashboardController;
+use App\Http\Controllers\Admin\PollController;
+
+Route::post('/login',[AuthController::class,'login']);
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
 });
@@ -31,6 +35,14 @@ Route::get('/upcoming-exams', [SpecialScheduleController::class, 'filterExamSche
 Route::middleware('auth:sanctum')->group(function(){
     Route::get('/my-schedule',[SpecialScheduleController::class,'index']);
     Route::post('/logout', [AuthController::class, 'logout']);
+    Route::get('/admin/dashboard', [DashboardController::class, 'index']);
+    Route::get('/admin/reports',[ReportController::class,'getUserReports']);
+    Route::post('/admin/reports/save', [ReportController::class, 'generateAndSaveReport']);
+    Route::get('/admin/reports/history', function() {
+       return \App\Models\Report::with('admin:id,name')->orderBy('created_at', 'desc')->get();
+}); 
+    Route::post('/admin/create-poll', [PollController::class, 'store']);
+
 });
 
 use App\Http\Controllers\HallController;
@@ -52,8 +64,6 @@ use App\Http\Controllers\Admin\CourseController as AdminCourseController;
 Route::post('/admin/add-course', [AdminCourseController::class, 'store']);
 Route::post('/admin/confirm-payment', [AdminCourseController::class, 'confirmPayment']);
 
-use App\Http\Controllers\Admin\PollController;
-Route::post('/admin/create-poll', [PollController::class, 'store']);
 Route::get('/student/polls', [PollController::class, 'index']);
 
 use App\Http\Controllers\TeacherExamController;
@@ -83,12 +93,7 @@ Route::post('/parent/complaints/submit', [ComplaintController::class, 'submitCom
 Route::get('/parent/complaints', [ComplaintController::class, 'viewComplaints']);
 Route::post('/admin/complaints/{complaintId}/answer', [ComplaintController::class, 'answerComplaint']);
 
-use App\Http\Controllers\ReportController;
-Route::get('/admin/reports',[ReportController::class,'getUserReports']);
-Route::post('/admin/reports/save', [ReportController::class, 'generateAndSaveReport']);
-Route::get('/admin/reports/history', function() {
-    return \App\Models\Report::with('admin:id,name')->orderBy('created_at', 'desc')->get();
-}); 
+
 
 use App\Http\Controllers\Admin\UserController;
 Route::post('/admin/users', [UserController::class, 'store']);

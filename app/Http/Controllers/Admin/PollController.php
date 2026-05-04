@@ -12,9 +12,9 @@ class PollController extends Controller
 {
     public function store(Request $request)
     {
-        $requester = User::find($request->query('requester_id'));
+        $admin = $request->user();
 
-        if (!$requester || $requester->role !== 'admin') {
+        if (!$admin || $admin->role !== 'admin') {
             return response()->json([
                'message' => 'Forbidden: Only Administrators can perform this action.'
     ], 403);
@@ -33,7 +33,7 @@ class PollController extends Controller
         foreach ($request->options as $optionText) {
             $poll->options()->create(['option_text' => $optionText]);
         }
-        $usersToNotify = User::whereIn('role', 'student')->get();
+        $usersToNotify = User::where('role', 'student')->get();
 
         foreach ($usersToNotify as $user) {
             $user->notify(new SchoolNotification(
