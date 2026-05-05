@@ -49,7 +49,7 @@ class StudentQuestionController extends Controller
     // 2. Student views their asked questions and the answers
     public function myQuestions(Request $request,$studentId)
     {
-        $requester = User::find($request->query('requester_id'));
+        $requester = auth()->user();
 
         if (!$requester || $requester->role !== 'student') {
                   return response()->json([

@@ -14,9 +14,9 @@ class UserController extends Controller
 {
     public function store(Request $request)
     {
-        $requester = User::find($request->query('requester_id'));
+        $user = auth()->user();
 
-        if (!$requester || $requester->role !== 'admin') {
+        if (!$user || $user->role !== 'admin') {
              return response()->json([
                 'message' => 'Forbidden: Only Administrators can perform this action.'
     ], 403);

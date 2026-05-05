@@ -11,9 +11,8 @@ class ComplaintController extends Controller
 {
     public function submitComplaint(Request $request, $parentId)
     {
-        $requester = User::find($request->query('requester_id'));
-
-        if (!$requester || $requester->role !== 'parent') {
+        $user = auth()->user();
+        if (!$user || $user->role !== 'parent') {
              return response()->json([
                  'message' => 'Forbidden: Only Parents can view this dashboard.'
     ], 403);
@@ -43,9 +42,9 @@ class ComplaintController extends Controller
     // Parent views their complaints and admin answers
     public function viewComplaints(Request $request,$parentId)
     {
-        $requester = User::find($request->query('requester_id'));
+        $user = auth()->user();
 
-        if (!$requester || $requester->role !== 'parent') {
+        if (!$user || $user->role !== 'parent') {
              return response()->json([
                  'message' => 'Forbidden: Only Parents can view this dashboard.'
     ], 403);
@@ -57,9 +56,9 @@ class ComplaintController extends Controller
     // Admin answers a complaint
     public function answerComplaint(Request $request, $adminId, $complaintId)
     {
-        $requester = User::find($request->query('requester_id'));
+        $user = auth()->user();
 
-          if (!$requester || $requester->role !== 'admin') {
+          if (!$user || $user->role !== 'admin') {
               return response()->json([
                  'message' => 'Forbidden: Only Administrators can perform this action.'
     ], 403);

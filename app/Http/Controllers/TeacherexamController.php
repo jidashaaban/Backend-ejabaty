@@ -16,7 +16,7 @@ class TeacherexamController extends Controller
      */
     public function createExam(Request $request, $teacherId)
     {
-        $requester = User::find($request->query('requester_id'));
+        $requester = auth()->user();
 
         if (!$requester || $requester->role !== 'teacher') {
                 return response()->json([
@@ -84,7 +84,7 @@ class TeacherexamController extends Controller
      */
     public function getExamForMarking(Request $request,$teacherId, $examId)
     {
-        $requester = User::find($request->query('requester_id'));
+        $requester = auth()->user();
 
         if (!$requester || $requester->role !== 'teacher') {
            return response()->json([
@@ -114,7 +114,7 @@ class TeacherexamController extends Controller
      */
     public function submitMarkingScheme(Request $request, $examId)
     {
-        $requester = User::find($request->query('requester_id'));
+        $requester = auth()->user();
 
         if (!$requester || $requester->role !== 'teacher') {
                return response()->json([

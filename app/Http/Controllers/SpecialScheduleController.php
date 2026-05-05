@@ -12,7 +12,7 @@ class SpecialScheduleController extends Controller
 {
     public function getMySchedule(Request $request, $userId)
     {
-        $requester = User::find($request->query('requester_id'));
+        $requester = $request->user();
 
         if (!$requester || !in_array($requester->role, ['student', 'teacher'])) {
               return response()->json([
@@ -91,7 +91,7 @@ class SpecialScheduleController extends Controller
 
     public function filterExamSchedule(Request $request,$userId) 
 {
-    $requester = User::find($request->query('requester_id'));
+    $requester = $request->user();
     if (!$requester || $requester->id != $userId) {
         return response()->json(['message' => 'Unauthorized'], 403);
     }

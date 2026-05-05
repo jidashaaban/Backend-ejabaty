@@ -7,6 +7,7 @@ use App\Models\Courses;
 use App\Models\Session;
 use App\Models\Hall;
 use App\Services\ExamHallService;
+use App\Models\User;
 use Carbon\Carbon;
 
 class ScheduleGenerator {
@@ -19,7 +20,7 @@ class ScheduleGenerator {
     
     public function generate($type) {
         set_time_limit(120); 
-        $requester = User::find($request->query('requester_id'));
+        $requester = auth()->user();
 
         if (!$requester || $requester->role !== 'admin') {
                return response()->json([

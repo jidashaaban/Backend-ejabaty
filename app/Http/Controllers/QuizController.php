@@ -16,9 +16,9 @@ class QuizController extends Controller
     // 1. Teacher Announces the Quiz
     public function announceQuiz(Request $request)
     {
-        $requester = User::find($request->query('requester_id'));
+        $user = auth()->user();
 
-        if (!$requester || $requester->role !== 'teacher') {
+        if (!$user || $user->role !== 'teacher') {
                  return response()->json([
                       'message' => 'Forbidden: Only Teachers can access this feature.'
     ], 403);
@@ -100,9 +100,8 @@ class QuizController extends Controller
     // 2. Student Views Upcoming Quizzes
     public function studentUpcomingQuizzes($studentId)
     {
-        $requester = User::find($request->query('requester_id'));
-
-        if (!$requester || $requester->role !== 'student') {
+        $user = auth()->user();
+        if (!$user || $user->role !== 'student') {
              return response()->json([
                  'message' => 'Forbidden: You can only access your own records'
     ], 403);
@@ -134,9 +133,9 @@ class QuizController extends Controller
     }
 
     public function addQuizMarks(Request $request){
-        $requester = User::find($request->query('requester_id'));
+        $user = auth()->user();
 
-        if (!$requester || $requester->role !== 'teacher') {
+        if (!$user || $user->role !== 'teacher') {
              return response()->json([
                 'message' => 'Forbidden: Only Teachers can access this feature.'
     ], 403);
@@ -171,9 +170,9 @@ class QuizController extends Controller
     }
 
     public function getPastQuizzes($studentId) {
-        $requester = User::find($request->query('requester_id'));
+        $user = auth()->user();
 
-        if (!$requester || $requester->role !== 'student') {
+        if (!$user || $user->role !== 'student') {
             return response()->json([
                'message' => 'Forbidden: You can only access your own records.'
     ], 403);

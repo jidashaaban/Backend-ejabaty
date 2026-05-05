@@ -23,9 +23,8 @@ class StudentCourseController extends Controller
     // 2. The logic when the student presses "Join"
     public function joinCourse(Request $request, $courseId)
 {
-    $requester = User::find($request->query('requester_id'));
-
-    if (!$requester || $requester->role !== 'student') {
+    $user = auth()->user();
+    if (!$user || $user->role !== 'student') {
            return response()->json([
               'message' => 'Forbidden: This is a Student-only area.'
     ], 403);
@@ -82,9 +81,9 @@ class StudentCourseController extends Controller
 
 public function myCourses(Request $request, $studentId)
     {
-        $requester = User::find($request->query('requester_id'));
+        $user = auth()->user();
 
-        if (!$requester || $requester->role !== 'student') {
+        if (!$user || $user->role !== 'student') {
               return response()->json([
                  'message' => 'Forbidden: This is a Student-only area.'
     ], 403);

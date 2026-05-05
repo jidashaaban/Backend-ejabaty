@@ -10,8 +10,7 @@ class TeacherQuestionController extends Controller
 {
     public function pendingQuestions(Request $request,$teacherId)
     {
-        $requester = User::find($request->query('requester_id'));
-
+        $requester = auth()->user();
         if (!$requester || $requester->role !== 'teacher') {
               return response()->json([
                  'message' => 'Forbidden: Only Teachers can access this feature.'
@@ -33,8 +32,7 @@ class TeacherQuestionController extends Controller
     // 2. Teacher answers a specific question
     public function answerQuestion(Request $request, $questionId)
     {
-        $requester = User::find($request->query('requester_id'));
-
+        $requester = auth()->user();
         if (!$requester || $requester->role !== 'teacher') {
               return response()->json([
                   'message' => 'Forbidden: Only Teachers can access this feature.'

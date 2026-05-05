@@ -10,7 +10,7 @@ class StudentMarkingSchemeController extends Controller
 {
     public function getMyExamsAndMarks(Request $request,$studentId)
     {
-        $requester = User::find($request->query('requester_id'));
+        $requester = auth()->user();
 
     // Ensure the requester is a student AND they are looking at THEIR OWN data
     if (!$requester || $requester->role !== 'student' || $requester->id != $studentId) {

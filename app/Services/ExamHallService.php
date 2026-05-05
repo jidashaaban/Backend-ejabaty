@@ -6,12 +6,13 @@ use App\Models\Hall;
 use App\Models\Student;
 use App\Models\HallAssignment;
 use App\Models\Courses;
+use App\Models\User; 
 
 class ExamHallService
 {
     public function distributeStudents($sessionId, $courseId)
     {
-        $requester = User::find($request->query('requester_id'));
+        $requester = auth()->user();
 
         if (!$requester || $requester->role !== 'admin') {
              return response()->json([

@@ -4,12 +4,14 @@ namespace App\Services;
 
 use App\Models\Session;
 use App\Models\Hall;
+use App\Models\User;
+use App\Models\HallAssignment;
 
 class HallAssigner 
 {
     public function assignHallsToSchedule($scheduleId)
     {
-        $requester = User::find($request->query('requester_id'));
+        $requester = auth()->user();
 
         if (!$requester || $requester->role !== 'admin') {
              return response()->json([

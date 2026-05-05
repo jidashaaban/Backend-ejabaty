@@ -12,9 +12,8 @@ class CourseController extends Controller
 {
     public function store(Request $request)
     {
-        $requester = User::find($request->query('requester_id'));
-
-        if (!$requester || $requester->role !== 'admin') {
+        $user = auth()->user();
+        if (!$user || $user->role !== 'admin') {
               return response()->json([
                  'message' => 'Forbidden: Only Administrators can perform this action.'
     ], 403);
