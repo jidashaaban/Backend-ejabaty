@@ -82,8 +82,7 @@ class ReportController extends Controller
     public function generateAndSaveReport(Request $request)
 {
     // 1. Identify who is making the request
-    $requesterId = $request->user(); 
-    $admin = \App\Models\User::find($requesterId);
+    $admin = $request->user(); 
 
     // 2. Security: Verify the user exists AND is an administrator
     if (!$admin || $admin->role !== 'admin') {
@@ -142,7 +141,7 @@ class ReportController extends Controller
 
     // 5. SAVE to the database (Fixing the undefined variable here)
     $savedReport = \App\Models\Report::create([
-        'admin_id'    => $admin->id,    // Corrected: Uses the $admin object from step 1
+        'admin_id'    => $admin->id,    
         'category'    => $role,
         'report_data' => $reportContent,
     ]);
