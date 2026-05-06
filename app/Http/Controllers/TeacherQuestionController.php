@@ -59,7 +59,8 @@ class TeacherQuestionController extends Controller
            $student->notify(new SchoolNotification(
                "Question Answered!",
                "Teacher " . ($teacher->name ?? 'assigned to the course') . " has responded to your question.",
-               "question_answered"
+               "question_answered",
+               $question->id
         ));
     }
 

@@ -23,15 +23,21 @@ class UserController extends Controller
 }
         $request->validate([
             'name' => 'required|string|max:255',
-            'email' => 'required|email|unique:users,email',
+            'father_name' => 'required|string|max:255',
+            'last_name' => 'required|string|max:255',
+            'email' => 'required_unless:role,student|nullable|email|unique:users,email',
             'password' => 'required|string|min:6',
             'role' => ['required', Rule::in(['admin', 'teacher', 'student', 'parent'])],
             'phone_number'=>'required|string|max:20',
             'health_state'=>'nullable|string|max:1000',
-
+            'grade'=>'required_if:role,student|string',
+            'past_education'=>'required_if:role,student|string',
+            'last_years_mark' => 'required_if:role,student|numeric',
+            'status' => 'required_if:role,student|in:active,unactive',
             // THE FIX:
             // 1. Array is required if role is parent.
             // 2. Each ID must exist in users table AND have the role 'student'.
+            'course_ids' => 'required_if:role,student,teacher|array', 
             'student_ids' => 'required_if:role,parent|array|min:1',
             'student_ids.*' => [
                 'integer',
@@ -50,11 +56,17 @@ class UserController extends Controller
             return DB::transaction(function () use ($request) {
                 $user = User::create([
                     'name' => $request->name,
+                    'father_name' => $request->father_name,
+                    'last_name' => $request->last_name,
                     'email' => $request->email,
                     'password' => Hash::make($request->password),
                     'role' => $request->role,
                     'phone_number'=>$request->phone_number,
+                    'grade' => $request->grade,
+                    'past_education' => $request->past_education,
+                    'last_years_mark' => $request->last_years_mark,
                     'health_state'=>$request->health_state,
+                    'status' => $request->status ?? 'active',
                 ]);
 
                 if ($user->role === 'parent') {
@@ -66,7 +78,8 @@ class UserController extends Controller
                           $student->notify(new SchoolNotification(
                              "Parent Account Linked",
                              "A parent account ($user->name) has been linked to your profile.",
-                             "parent_link"
+                             "parent_link",
+                             $user->id
                 ));
                 
             }

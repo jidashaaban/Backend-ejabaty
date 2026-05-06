@@ -39,7 +39,8 @@ class PollController extends Controller
             $user->notify(new SchoolNotification(
                "New Poll Available!",
                "The Admin has posted a new poll: " . $poll->question,
-               "new_poll"
+               "new_poll",
+               $poll->id
         ));
     }
         return response()->json([

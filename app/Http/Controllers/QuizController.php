@@ -86,7 +86,8 @@ class QuizController extends Controller
         $student->notify(new SchoolNotification(
             "Upcoming Quiz!",
             "A new quiz for '" . $course->name . "' has been scheduled for " . $request->quiz_date,
-            "quiz_announcement"
+            "quiz_announcement",
+            $quiz->id
         ));
     }
 
@@ -162,7 +163,9 @@ class QuizController extends Controller
            $student->notify(new SchoolNotification(
                "Quiz Result Published",
                "Your marks for the quiz in '" . $quiz->course->name . "' are now available. Points: " . $request->points,
-               "quiz_mark"
+               "quiz_mark",
+               $quiz->id
+
         ));
     }
      return response()->json(['message' => 'Points and comment added successfully!']);

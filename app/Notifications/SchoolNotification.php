@@ -9,19 +9,21 @@ use Illuminate\Notifications\Notification;
 
 class SchoolNotification extends Notification
 {
+
     use Queueable;
     protected $title;
     protected $message;
     protected $type; // e.g., 'quiz', 'mark', 'complaint'
-
+    protected $related_id;
     /**
      * Create a new notification instance.
      */
-    public function __construct($title, $message, $type)
+    public function __construct($title, $message, $type, $related_id = null)
     {
         $this->title = $title;
         $this->message = $message;
         $this->type = $type;
+        $this->related_id = $related_id;
     }
 
     /**
@@ -56,6 +58,7 @@ class SchoolNotification extends Notification
             'title' => $this->title,
             'message' => $this->message,
             'type' => $this->type,
+            'related_id' => $this->related_id,
         ];
     }
 }

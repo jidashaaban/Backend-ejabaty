@@ -29,6 +29,7 @@ class CourseController extends Controller
 
         // 2. Create the course in the database
         $course = Courses::create($validatedData);
+        
 
         $teacher = User::find($course->teacher_id);
         if ($teacher) {
@@ -44,7 +45,8 @@ class CourseController extends Controller
              $student->notify(new SchoolNotification(
                  "New Course Available!",
                  "The course '" . $course->name . "' (Code: " . $course->code . ") is now open for enrollment. Check it out!",
-                 "new_course_alert"
+                 "new_course_alert",
+                 $course->id
         ));
     }
 
