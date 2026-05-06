@@ -89,8 +89,8 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
     // Notifications (Now secure)
-    Route::get('/notifications/{userId}', [NotificationController::class, 'index']);
-    Route::post('/notifications/{userId}/{notificationId}/read', [NotificationController::class, 'markAsRead']);
+    Route::get('/notifications', [NotificationController::class, 'index']);
+    Route::post('/notifications/{notificationId}/read', [NotificationController::class, 'markAsRead']);
 
     // General
     Route::get('/halls', [HallController::class, 'index']);

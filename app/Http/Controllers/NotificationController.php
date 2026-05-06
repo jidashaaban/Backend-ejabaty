@@ -8,9 +8,9 @@ use Illuminate\Http\Request;
 class NotificationController extends Controller
 {
     // The Frontend calls this to see the list in the "Bell" icon
-    public function index(Request $request, $userId)
+    public function index(Request $request)
     {
-        $user = User::findOrFail($userId);
+        $user = $request->user();
         
         return response()->json([
             'unread_count' => $user->unreadNotifications->count(),
@@ -20,9 +20,9 @@ class NotificationController extends Controller
     }
 
     // The Frontend calls this when a user clicks a notification to clear the red dot
-    public function markAsRead(Request $request, $userId, $notificationId)
+    public function markAsRead(Request $request, $notificationId)
     {
-        $user = User::findOrFail($userId);
+        $user = $request->user();
         $notification = $user->notifications()->where('id', $notificationId)->first();
 
         if ($notification) {

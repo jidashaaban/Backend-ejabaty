@@ -26,6 +26,8 @@ class UserController extends Controller
             'email' => 'required|email|unique:users,email',
             'password' => 'required|string|min:6',
             'role' => ['required', Rule::in(['admin', 'teacher', 'student', 'parent'])],
+            'phone_number'=>'required|string|max:20',
+            'health_state'=>'nullable|string|max:1000',
 
             // THE FIX:
             // 1. Array is required if role is parent.
@@ -51,6 +53,8 @@ class UserController extends Controller
                     'email' => $request->email,
                     'password' => Hash::make($request->password),
                     'role' => $request->role,
+                    'phone_number'=>$request->phone_number,
+                    'health_state'=>$request->health_state,
                 ]);
 
                 if ($user->role === 'parent') {
