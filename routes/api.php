@@ -40,6 +40,9 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/reports/history', function() {
             return \App\Models\Report::with('admin:id,name')->orderBy('created_at', 'desc')->get();
         });
+        Route::get('/simple-students',function(){
+            return App\Models\User::where('role','student')->select('id','name','email')->get();
+        });
         Route::post('/create-poll', [PollController::class, 'store']);
         Route::post('/add-course', [AdminCourseController::class, 'store']);
         Route::post('/confirm-payment', [AdminCourseController::class, 'confirmPayment']);
@@ -47,6 +50,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/complaints/{complaintId}/answer', [ComplaintController::class, 'answerComplaint']);
         Route::post('/users', [UserController::class, 'store']);
         Route::post('/setup-halls', [HallController::class, 'store']);
+        
     });
 
     // Schedule Management
