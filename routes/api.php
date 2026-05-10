@@ -37,9 +37,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/dashboard', [DashboardController::class, 'index']);
         Route::get('/reports', [ReportController::class, 'getUserReports']);
         Route::post('/reports/save', [ReportController::class, 'generateAndSaveReport']);
-        Route::get('/reports/history', function() {
-            return \App\Models\Report::with('admin:id,name')->orderBy('created_at', 'desc')->get();
-        });
+        Route::get('/reports/history', [ReportController::class, 'getHistory']); // Archive
         Route::get('/courses', [CourseController::class, 'index']);
         Route::get('/courses/{id}', [CourseController::class, 'show']);
         Route::put('/courses/{id}', [CourseController::class, 'update']);
