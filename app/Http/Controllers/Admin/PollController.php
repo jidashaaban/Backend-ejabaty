@@ -60,4 +60,29 @@ class PollController extends Controller
         'data' => $polls
     ]);
 }
+
+public function show($id) {
+    $poll = Poll::with('options')->find($id);
+    if (!$poll) return response()->json(['message' => 'Poll not found'], 404);
+    return response()->json($poll, 200);
+}
+public function update(Request $request, $id) {
+    $poll = Poll::find($id);
+    if (!$poll) return response()->json(['message' => 'Poll not found'], 404);
+
+    $poll->update(['question' => $request->question]);
+    $students = User::where('role', 'student')->get();
+    foreach ($students as $student) {
+        $student->notify(new SchoolNotification("Poll Update", "A poll you are eligible for has been updated.", "new_poll"));
+    }
+    // Note: If updating options, you may need to delete old ones and re-add [cite: 121]
+    return response()->json(['message' => 'Poll updated successfully', 'poll' => $poll], 200);
+}
+public function destroy($id) {
+    $poll = Poll::find($id);
+    if (!$poll) return response()->json(['message' => 'Poll not found'], 404);
+
+    $poll->delete(); // onDelete('cascade') handles the options [cite: 121, 134]
+    return response()->json(['message' => 'Poll deleted successfully'], 200);
+}
 }

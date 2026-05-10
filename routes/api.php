@@ -40,6 +40,10 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/reports/history', function() {
             return \App\Models\Report::with('admin:id,name')->orderBy('created_at', 'desc')->get();
         });
+        Route::get('/courses', [CourseController::class, 'index']);
+        Route::get('/courses/{id}', [CourseController::class, 'show']);
+        Route::put('/courses/{id}', [CourseController::class, 'update']);
+        Route::delete('/courses/{id}', [CourseController::class, 'destroy']);
         Route::get('/simple-students',function(){
             return App\Models\User::where('role','student')->select('id','name','email')->get();
         });
@@ -50,6 +54,15 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/complaints/{complaintId}/answer', [ComplaintController::class, 'answerComplaint']);
         Route::post('/users', [UserController::class, 'store']);
         Route::post('/setup-halls', [HallController::class, 'store']);
+        Route::get('/polls', [PollController::class, 'index']);
+        Route::get('/polls/{id}', [PollController::class, 'show']);
+        Route::put('/polls/{id}', [PollController::class, 'update']);
+        Route::delete('/polls/{id}', [PollController::class, 'destroy']);
+        Route::get('/halls', [HallController::class, 'index']);
+        Route::put('/halls/{id}', [HallController::class, 'update']);
+        Route::delete('/halls/{id}', [HallController::class, 'destroy']);
+        Route::put('/complaints/{id}/answer', [ComplaintController::class, 'updateAnswer']);
+});
         
     });
 
@@ -96,6 +109,5 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/notifications', [NotificationController::class, 'index']);
     Route::post('/notifications/{notificationId}/read', [NotificationController::class, 'markAsRead']);
 
-    // General
-    Route::get('/halls', [HallController::class, 'index']);
-});
+    
+    

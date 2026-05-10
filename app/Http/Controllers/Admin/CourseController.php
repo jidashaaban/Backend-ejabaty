@@ -82,4 +82,37 @@ class CourseController extends Controller
             'message' => 'Payment confirmed! The seat is now permanently booked for this student.'
         ]);
     }
+    public function index() {
+    return response()->json(Course::all(), 200); // Retrieve all courses [cite: 15]
+    }
+    public function show($id) {
+    $course = Course::find($id);
+    if (!$course) return response()->json(['message' => 'Course not found'], 404);
+    return response()->json($course, 200); // Retrieve course by ID
+    }
+    public function update(Request $request, $id) {
+    $course = Course::find($id);
+    if (!$course) return response()->json(['message' => 'Course not found'], 404);
+    
+    // Ensure fields are in your $fillable array in Course.php [cite: 69, 70]
+    $course->update($request->all()); 
+    $students = User::where('role', 'student')->get();
+    foreach ($students as $student) {
+        $student->notify(new SchoolNotification(
+            "Course Updated", 
+            "The details for {$course->name} have been updated.", 
+            "course_update"
+        ));
+    return response()->json(['message' => 'Course updated successfully', 'course' => $course], 200);
+
+    }
+    }
+    public function destroy($id) {
+    $course = Course::find($id);
+    if (!$course) return response()->json(['message' => 'Course not found'], 404);
+
+    
+    $course->delete(); // Delete course by ID
+    return response()->json(['message' => 'Course deleted successfully'], 200);
+    }
 }

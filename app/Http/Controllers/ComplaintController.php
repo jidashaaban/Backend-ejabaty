@@ -100,4 +100,23 @@ class ComplaintController extends Controller
 
         return response()->json(['success' => true, 'message' => 'Complaint answered successfully.']);
     }
+    public function updateAnswer(Request $request, $id) {
+    $complaint = Complaint::find($id);
+    if (!$complaint) return response()->json(['message' => 'Complaint not found'], 404);
+
+    $complaint->update([
+        'answer_text' => $request->answer_text,
+        'status' => 'resolved'
+    ]);
+
+    // Notify the parent [cite: 1056]
+    $parent = User::find($complaint->parent_id);
+    $parent->notify(new SchoolNotification(
+        "Complaint Answered", 
+        "An admin has responded to your complaint regarding: {$complaint->subject}", 
+        "complaint_response"
+    ));
+
+    return response()->json(['message' => 'Answer saved and parent notified'], 200);
+}
 }
