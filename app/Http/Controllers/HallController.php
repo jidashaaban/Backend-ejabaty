@@ -1,60 +1,89 @@
 <?php
-
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\Hall;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\DB;
-use App\Models\User;
 
 class HallController extends Controller
 {
+    // 1. ADD / CREATE (Modified to stop deleting old halls)
     public function store(Request $request)
     {
         $user = auth()->user();
         if (!$user || $user->role !== 'admin') {
-             return response()->json([
-                'message' => 'Forbidden: Only Administrators can perform this action.'
-    ], 403);
-}
-        // 1. Validate the input
-        // Expecting an array like: [['name' => 'Hall 1', 'capacity' => 50], ...]
+            return response()->json(['message' => 'Forbidden'], 403);
+        }
+
         $request->validate([
-            'halls' => 'required|array|min:1',
-            'halls.*.name' => 'required|string|distinct',
-            'halls.*.capacity' => 'required|integer|min:1',
+            'name' => 'required|string|unique:halls,name',
+            'capacity' => 'required|integer|min:1',
         ]);
 
-        Schema::disableForeignKeyConstraints();
-
-        DB::table('hall_assignments')->truncate(); // Clear exam assignments
-        DB::table('sessions')->update(['hall_id' => null]); // Unlink halls from course sessions
-        // 2. Clear old halls (optional: remove if you want to keep adding new ones)
-        // Usually, when an admin "enters the halls," they are setting up the building.
-        Hall::truncate(); 
-
-        Schema::enableForeignKeyConstraints();
-
-        // 3. Save the new halls
-        foreach ($request->halls as $hallData) {
-            Hall::create([
-                'name' => $hallData['name'],
-                'capacity' => $hallData['capacity']
-            ]);
-        }
+        $hall = Hall::create([
+            'name' => $request->name,
+            'capacity' => $request->capacity
+        ]);
 
         return response()->json([
             'success' => true,
-            'message' => count($request->halls) . ' halls have been configured successfully.'
+            'message' => 'Hall added successfully!',
+            'data' => $hall
         ]);
     }
 
-    /**
-     * List all halls currently in the system.
-     */
+    // 2. LIST ALL
     public function index()
     {
         return response()->json(Hall::all());
+    }
+
+    // 3. UPDATE
+    public function update(Request $request, $id)
+    {
+        $user = auth()->user();
+        if (!$user || $user->role !== 'admin') {
+            return response()->json(['message' => 'Forbidden'], 403);
+        }
+
+        $hall = Hall::findOrFail($id);
+
+        $request->validate([
+            'name' => 'required|string|unique:halls,name,' . $id,
+            'capacity' => 'required|integer|min:1',
+        ]);
+
+        $hall->update($request->only(['name', 'capacity']));
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Hall updated successfully!',
+            'data' => $hall
+        ]);
+    }
+
+    // 4. DELETE
+    public function destroy($id)
+    {
+        $user = auth()->user();
+        if (!$user || $user->role !== 'admin') {
+            return response()->json(['message' => 'Forbidden'], 403);
+        }
+
+        $hall = Hall::findOrFail($id);
+
+        // Safety check: Unlink this hall from any sessions before deleting
+        Schema::disableForeignKeyConstraints();
+        DB::table('sessions')->where('hall_id', $id)->update(['hall_id' => null]);
+        DB::table('hall_assignments')->where('hall_id', $id)->delete();
+        
+        $hall->delete();
+        Schema::enableForeignKeyConstraints();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Hall deleted successfully.'
+        ]);
     }
 }
