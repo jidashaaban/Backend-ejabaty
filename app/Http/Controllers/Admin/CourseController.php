@@ -83,7 +83,7 @@ class CourseController extends Controller
         ]);
     }
     public function index() {
-    return response()->json(Course::all(), 200); // Retrieve all courses [cite: 15]
+    return response()->json(Courses::all(), 200); // Retrieve all courses [cite: 15]
     }
     public function show($id) {
     $course = Course::find($id);

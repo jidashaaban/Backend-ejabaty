@@ -11,13 +11,12 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('polls', function (Blueprint $table) {
-        $table->id();
-        $table->string('title'); // Change 'question' to 'title'
-        $table->text('description')->nullable(); // Add description
-        $table->dateTime('expires_at'); // Add expiration
-        $table->timestamps();
-    });
+        Schema::create('poll_questions', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('poll_id')->constrained()->onDelete('cascade');
+            $table->string('question_text');
+            $table->timestamps();
+        });
     }
 
     /**
@@ -25,6 +24,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('polls');
+        Schema::dropIfExists('poll_questions');
     }
 };

@@ -119,4 +119,27 @@ class ComplaintController extends Controller
 
     return response()->json(['message' => 'Answer saved and parent notified'], 200);
 }
+public function getAllComplaints(Request $request)
+{
+    $user = auth()->user();
+
+    // 1. Security Check: Only admins allowed
+    if (!$user || $user->role !== 'admin') {
+        return response()->json([
+            'message' => 'Forbidden: Only Administrators can view the master complaint list.'
+        ], 403);
+    }
+
+    // 2. Fetch all complaints with parent details
+    // We assume you have a 'parent' relationship defined in your Complaint model
+    $complaints = Complaint::with('parent:id,name,email')
+        ->latest()
+        ->get();
+
+    return response()->json([
+        'success' => true,
+        'count' => $complaints->count(),
+        'data' => $complaints
+    ]);
+}
 }

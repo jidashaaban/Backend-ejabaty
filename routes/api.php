@@ -37,34 +37,45 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/dashboard', [DashboardController::class, 'index']);
         Route::get('/reports', [ReportController::class, 'getUserReports']);
         Route::post('/reports/save', [ReportController::class, 'generateAndSaveReport']);
-        Route::get('/reports/history', [ReportController::class, 'getHistory']); // Archive
-        Route::get('/courses', [CourseController::class, 'index']);
-        Route::get('/courses/{id}', [CourseController::class, 'show']);
-        Route::put('/courses/{id}', [CourseController::class, 'update']);
-        Route::delete('/courses/{id}', [CourseController::class, 'destroy']);
-        Route::get('/simple-students',function(){
-            return App\Models\User::where('role','student')->select('id','name','email')->get();
-        });
-        Route::post('/create-poll', [PollController::class, 'store']);
+        Route::get('/reports/history', [ReportController::class, 'getHistory']);
+        
+        // Course Management (FIXED: Used correct class name AdminCourseController)
+        Route::get('/courses', [AdminCourseController::class, 'index']);
+        Route::get('/courses/{id}', [AdminCourseController::class, 'show']);
+        Route::put('/courses/{id}', [AdminCourseController::class, 'update']);
+        Route::delete('/courses/{id}', [AdminCourseController::class, 'destroy']);
         Route::post('/add-course', [AdminCourseController::class, 'store']);
         Route::post('/confirm-payment', [AdminCourseController::class, 'confirmPayment']);
-        Route::post('/submit-mark', [AdminMarkController::class, 'submitStudentMark']);
-        Route::post('/complaints/{complaintId}/answer', [ComplaintController::class, 'answerComplaint']);
+
+        // User & Hall Management
+        Route::get('/simple-students', function() {
+            return App\Models\User::where('role','student')->select('id','name','email')->get();
+        });
         Route::post('/users', [UserController::class, 'store']);
         Route::post('/setup-halls', [HallController::class, 'store']);
-        Route::get('/polls', [PollController::class, 'index']);
-        Route::get('/polls/{id}', [PollController::class, 'show']);
-        Route::put('/polls/{id}', [PollController::class, 'update']);
-        Route::delete('/polls/{id}', [PollController::class, 'destroy']);
         Route::get('/halls', [HallController::class, 'index']);
         Route::put('/halls/{id}', [HallController::class, 'update']);
         Route::delete('/halls/{id}', [HallController::class, 'destroy']);
+
+        // Complaint Management
+        Route::post('/complaints/{complaintId}/answer', [ComplaintController::class, 'answerComplaint']);
         Route::put('/complaints/{id}/answer', [ComplaintController::class, 'updateAnswer']);
-});
+        Route::get('/complaints', [ComplaintController::class, 'getAllComplaints']);
         
+        // --- POLL MANAGEMENT (FIXED: Removed redundant /admin paths) ---
+        Route::post('/create-poll', [PollController::class, 'store']);
+        Route::get('/polls', [PollController::class, 'index']);
+        Route::get('/polls/{id}', [PollController::class, 'show']); 
+        Route::put('/polls/{id}', [PollController::class, 'update']); 
+        Route::delete('/polls/{id}', [PollController::class, 'destroy']);
+
+        Route::put('/polls/{id}/questions/{questionId}', [PollController::class, 'updateQuestion']);
+        Route::delete('/polls/{id}/questions/{questionId}', [PollController::class, 'destroyQuestion']);
+        Route::put('/polls/{id}/questions/{questionId}/options/{optionId}', [PollController::class, 'updateOption']);
+        Route::delete('/polls/{id}/questions/{questionId}/options/{optionId}', [PollController::class, 'destroyOption']);
     });
 
-    // Schedule Management
+    // Schedule Management (Now correctly inside Sanctum middleware)
     Route::post('/schedule/generate', [ScheduleController::class, 'store']);
     Route::get('/admin-schedule', [ScheduleController::class, 'index']);
     Route::delete('sessions/{id}', [ScheduleController::class, 'destroySession']);
@@ -103,9 +114,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/complaints', [ComplaintController::class, 'viewComplaints']);
     });
 
-    // Notifications (Now secure)
+    // Notifications
     Route::get('/notifications', [NotificationController::class, 'index']);
     Route::post('/notifications/{notificationId}/read', [NotificationController::class, 'markAsRead']);
 
-    
-    
+}); // <-- THE AUTH GROUP NOW CORRECTLY ENDS HERE

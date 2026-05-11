@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 class PollOption extends Model
 {
     use HasFactory;
-    protected $fillable = ['poll_id', 'option_text'];
+    protected $fillable = ['poll_question_id', 'option_text'];
 
 public function poll()
 {
@@ -17,5 +17,9 @@ public function poll()
 public function votes()
     {
         return $this->hasMany(PollVote::class);
+    }
+public function question()
+    {
+        return $this->belongsTo(PollQuestion::class, 'poll_question_id');
     }
 }

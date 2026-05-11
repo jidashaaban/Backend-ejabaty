@@ -86,7 +86,21 @@ class UserController extends Controller
         }
                 }
 
+            // 3. LOGIC FOR STUDENTS (Linking to user_course table)
+            if ($user->role === 'student' && $request->has('course_ids')) {
+                // This fills your user_course table using the relationship in your model
+                $user->courses()->attach($request->course_ids, [
+                    'status' => 'booked',
+                    'booked_at' => now()
+                ]);
+            }
 
+            // 4. LOGIC FOR TEACHERS (Updating the teacher_id column in courses)
+            if ($user->role === 'teacher' && $request->has('course_ids')) {
+                // Teachers are linked directly on the courses table
+                \App\Models\Courses::whereIn('id', $request->course_ids)
+                    ->update(['teacher_id' => $user->id]);
+            }
                 return response()->json([
                     'success' => true,
                     'message' => 'User created and linked successfully!',

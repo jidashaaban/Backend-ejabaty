@@ -9,57 +9,83 @@ use Illuminate\Support\Facades\Hash;
 
 class SchoolSystemSeeder extends Seeder
 {
-    public function run()
+    public function run(): void
     {
-        
-        // 1. Create 5 Teachers
-        $teachers = [];
-        for ($i = 1; $i <= 5; $i++) {
-            $teachers[] = User::create([
-                'name' => "Teacher $i",
-                'email' => "teacher$i@uni.edu",
-                'password' => Hash::make('password'),
-                'role' => 'teacher'
-            ]);
-        }
+        // 1. Create an Admin
+        User::updateOrCreate(
+            ['email' => 'admin@school.com'],
+            [
+                'name' => 'System',
+                'father_name' => 'Admin',
+                'last_name' => 'Manager',
+                'password' => Hash::make('password123'),
+                'role' => 'admin',
+                'phone_number' => '12345678',
+                'health_state' => null,
+                'status' => 'active',
+                // Non-student fields set to null
+                'grade' => null,
+                'past_education' => null,
+                'last_years_mark' => null,
+            ]
+        );
 
-        // 2. Create 20 Courses and assign them to random teachers
-        $courseList = [
-            'Math 101', 'Physics 101', 'Chemistry 101', 'Biology 101', 'History 101',
-            'English 201', 'Calculus II', 'Database Systems', 'Web Development', 'Mobile Apps',
-            'Cyber Security', 'AI Basics', 'Software Engineering', 'Data Structures', 'Algorithms',
-            'Network Security', 'Operating Systems', 'Cloud Computing', 'UI/UX Design', 'Discrete Math'
-        ];
+        // 2. Create a Teacher
+        User::updateOrCreate(
+            ['email' => 'sam@school.com'],
+            [
+                'name' => 'Sam',
+                'father_name' => 'Robert',
+                'last_name' => 'Smith',
+                'password' => Hash::make('password123'),
+                'role' => 'teacher',
+                'phone_number' => '87654321',
+                'health_state' => 'None',
+                'status' => 'active',
+                'grade' => null,
+                'past_education' => 'PhD in Computer Science',
+                'last_years_mark' => null,
+            ]
+        );
 
-        $createdCourses = [];
-        foreach ($courseList as $index => $name) {
-    $createdCourses[] = Courses::create([
-        'name' => $name,
-        // ADD THIS LINE BELOW:
-        'code' => 'CRS-' . str_pad($index + 1, 3, '0', STR_PAD_LEFT), 
-        'teacher_id' => $teachers[array_rand($teachers)]->id 
-    ]);
+        // 3. Create a Student (The "Child")
+        $student = User::updateOrCreate(
+            ['email' => 'jida@school.com'],
+            [
+                'name' => 'Jida',
+                'father_name' => 'Ahmad',
+                'last_name' => 'Shaaban',
+                'password' => Hash::make('password123'),
+                'role' => 'student',
+                'phone_number' => '55566677',
+                'health_state' => 'Allergy: Peanuts',
+                'status' => 'active',
+                'grade' => '12th Grade',
+                'past_education' => '11th Grade - High School',
+                'last_years_mark' => 95.5,
+            ]
+        );
 
-        }
+        // 4. Create a Parent
+        $parent = User::updateOrCreate(
+            ['email' => 'ahmad@parent.com'],
+            [
+                'name' => 'Ahmad',
+                'father_name' => 'Ibrahim',
+                'last_name' => 'Shaaban',
+                'password' => Hash::make('password123'),
+                'role' => 'parent',
+                'phone_number' => '44455566',
+                'health_state' => null,
+                'status' => 'active',
+                'grade' => null,
+                'past_education' => null,
+                'last_years_mark' => null,
+            ]
+        );
 
-        // 3. Create 50 Students
-        $students = [];
-        for ($i = 1; $i <= 50; $i++) {
-            $students[] = User::create([
-                'name' => "Student $i",
-                'email' => "student$i@student.edu",
-                'password' => Hash::make('password'),
-                'role' => 'student'
-            ]);
-        }
-
-        // 4. Randomly Enroll Students into Courses (5 courses per student)
-        foreach ($students as $student) {
-            // Pick 5 random unique courses for each student
-            $randomCourses = array_rand($createdCourses, 5);
-            foreach ($randomCourses as $courseIndex) {
-                $student->courses()->attach($createdCourses[$courseIndex]->id);
-            }
-        }
+        // Link Parent to Student in the pivot table [cite: 73, 74]
+        // This ensures the parent can see Jida's data on their dashboard
+        $parent->children()->sync([$student->id]);
     }
 }

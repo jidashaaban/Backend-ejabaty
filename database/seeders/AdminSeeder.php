@@ -5,7 +5,7 @@ namespace Database\Seeders;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use App\Models\User;
-
+use Illuminate\Support\Facades\Hash; 
 class AdminSeeder extends Seeder
 {
     /**
@@ -14,25 +14,21 @@ class AdminSeeder extends Seeder
     public function run(): void
     {
         User::updateOrCreate(
-            ['email' => 'admin@school.com'], // Search by email
-            [
-                'name'     => 'Headmaster Admin',
-                'password' => bcrypt('password'),
-                'role'     => 'admin', // Essential for your logic
-            ]
-        );
-
-        // 2. Create a secondary Admin (Registrar)
-        User::updateOrCreate(
             ['email' => 'registrar@school.com'],
             [
-                'name'     => 'School Registrar',
-                'password' => bcrypt('password'),
-                'role'     => 'admin',
+                'name' => 'School',
+                'father_name' => 'System', // Added to prevent DB error
+                'last_name' => 'Registrar', // Added to prevent DB error
+                'password' => Hash::make('password123'),
+                'role' => 'admin',
+                'phone_number' => '00000000', // Added to prevent DB error
+                'status' => 'active',        // Added to prevent DB error
+                'health_state' => null,
+                'grade' => null,
+                'past_education' => null,
+                'last_years_mark' => null,
             ]
         );
-
-        $this->command->info("Admin accounts seeded successfully!");
     }
     
 }
