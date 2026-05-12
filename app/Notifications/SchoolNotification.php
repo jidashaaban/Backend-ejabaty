@@ -18,11 +18,12 @@ class SchoolNotification extends Notification
     /**
      * Create a new notification instance.
      */
-    public function __construct($title, $message, $type, $related_id = null)
+    public function __construct($title, $message, $type, $courseIdentifier, $related_id = null)
     {
         $this->title = $title;
         $this->message = $message;
         $this->type = $type;
+        $this->courseIdentifier = $courseIdentifier;
         $this->related_id = $related_id;
     }
 
@@ -58,6 +59,7 @@ class SchoolNotification extends Notification
             'title' => $this->title,
             'message' => $this->message,
             'type' => $this->type,
+            'course_name'=>$this->courseIdentifier,
             'related_id' => $this->related_id,
         ];
     }

@@ -153,7 +153,8 @@ class ScheduleController extends Controller
                 $user->notify(new SchoolNotification(
                     "New $typeName Schedule Live!",
                     "The administration has published the latest $typeName schedule.",
-                    "schedule_published"
+                    "schedule_published",
+                    "Academic Schedule"
                 ));
             }
 

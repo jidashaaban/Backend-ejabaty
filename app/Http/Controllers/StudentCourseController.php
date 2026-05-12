@@ -60,7 +60,8 @@ class StudentCourseController extends Controller
     $student->notify(new SchoolNotification(
         "Course Seat Reserved",
         "You have booked a seat in " . $course->name . ". Please visit the administration within 24 hours to complete your payment.",
-        "course_joined_pending"
+        "course_joined_pending",
+        $course->name
     ));
 
     // 2. Notify the Parent
@@ -70,7 +71,8 @@ class StudentCourseController extends Controller
         $parent->notify(new SchoolNotification(
             "New Course Booking",
             $student->name . " has reserved a seat in " . $course->name . ". Payment is required within 24 hours.",
-            "child_course_booking"
+            "child_course_booking",
+            $course->name
         ));
     }
 

@@ -38,8 +38,9 @@ class ScheduleGenerator {
         }
 
         // 2. GET COURSES
-        $courses = Courses::withCount('students')
-            ->orderBy('students_count', 'desc')
+        $courses = Courses::where('is_active',true)
+            ->withCount('students')
+            ->orderBy('students_count','desc')
             ->get();
         
         $failedCourses = [];

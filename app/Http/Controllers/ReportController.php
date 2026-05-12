@@ -152,4 +152,31 @@ class ReportController extends Controller
         'data' => $savedReport
     ]);
 }
+public function getSavedReportsHistory(Request $request)
+{
+    $admin = $request->user();
+
+    // Security Check
+    if (!$admin || $admin->role !== 'admin') {
+        return response()->json(['message' => 'Forbidden: Admin only.'], 403);
+    }
+
+    // Fetch all saved reports, ordered by the most recent first
+    $history = \App\Models\Report::with('admin:id,name') // Optional: if you want to see which admin saved it
+        ->orderBy('created_at', 'desc')
+        ->get();
+
+    if ($history->isEmpty()) {
+        return response()->json([
+            'success' => true,
+            'message' => 'No historical reports found.',
+            'reports' => []
+        ]);
+    }
+
+    return response()->json([
+        'success' => true,
+        'reports' => $history
+    ]);
+}
 }

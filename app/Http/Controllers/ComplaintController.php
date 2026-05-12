@@ -32,7 +32,8 @@ class ComplaintController extends Controller
         $admin->notify(new SchoolNotification(
             "New Parent Complaint",
             "A parent has submitted a complaint regarding: " . $request->subject,
-            "new_complaint"
+            "new_complaint",
+             $request->subject
         ));
     }
 
@@ -94,7 +95,8 @@ class ComplaintController extends Controller
         $parent->notify(new SchoolNotification(
             "Complaint Answered",
             "The administration has responded to your inquiry: " . $complaint->subject,
-            "complaint_response"
+            "complaint_response",
+            $complaint->subject
         ));
     }
 
@@ -114,7 +116,8 @@ class ComplaintController extends Controller
     $parent->notify(new SchoolNotification(
         "Complaint Answered", 
         "An admin has responded to your complaint regarding: {$complaint->subject}", 
-        "complaint_response"
+        "complaint_response",
+        $complaint->subject
     ));
 
     return response()->json(['message' => 'Answer saved and parent notified'], 200);

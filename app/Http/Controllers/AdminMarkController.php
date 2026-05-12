@@ -39,13 +39,15 @@ class AdminMarkController extends Controller
         $student->notify(new SchoolNotification(
             "New Exam Grade Released",
             "Your mark for $courseName has been submitted. Your grade: " . $request->mark . "%",
-            "exam_result"
+            "exam_result",
+            $course->name
         ));
         foreach ($student->parents as $parent) {
         $parent->notify(new SchoolNotification(
             "Child Progress Update",
             "A new grade has been posted for " . $student->name . " in $courseName. Grade: " . $request->mark . "%",
-            "child_grade_alert"
+            "child_grade_alert",
+            $course->name
         ));
     }
 

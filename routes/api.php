@@ -39,7 +39,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/dashboard', [DashboardController::class, 'index']);
         Route::get('/reports', [ReportController::class, 'getUserReports']);
         Route::post('/reports/save', [ReportController::class, 'generateAndSaveReport']);
-        Route::get('/reports/history', [ReportController::class, 'getHistory']);
+        Route::get('/reports/history', [ReportController::class, 'getSavedReportsHistory']);
         
         // Course Management (FIXED: Used correct class name AdminCourseController)
         Route::get('/courses', [AdminCourseController::class, 'index']);
@@ -81,6 +81,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/schedule/generate', [ScheduleController::class, 'store']);
     Route::get('/admin-schedule', [ScheduleController::class, 'index']);
     Route::delete('sessions/{id}', [ScheduleController::class, 'destroySession']);
+    Route::patch('/courses/{id}/toggle-status', [AdminCourseController::class, 'toggleCourseStatus']);
 
     // Teacher Specific Routes
     Route::prefix('teacher')->group(function () {
