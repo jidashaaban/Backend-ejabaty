@@ -1,4 +1,5 @@
 <?php
+namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -21,6 +22,7 @@ use App\Http\Controllers\ParentDashboardController;
 use App\Http\Controllers\ComplaintController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\TeacherDashboardController;
 
 /* --- Public Routes --- */
 Route::post('/login', [AuthController::class, 'login']);
@@ -82,6 +84,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Teacher Specific Routes
     Route::prefix('teacher')->group(function () {
+        Route::get('/dashboard', [TeacherDashboardController::class, 'getDashboardStats']);
         Route::post('/announce-quiz', [QuizController::class, 'announceQuiz']);
         Route::post('/quiz/submit-points', [QuizController::class, 'addQuizMarks']);
         Route::post('/exams/create', [TeacherExamController::class, 'createExam']);
@@ -89,7 +92,15 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/exams/{examId}/submit-marking', [TeacherExamController::class, 'submitMarkingScheme']);
         Route::get('/questions/pending', [TeacherQuestionController::class, 'pendingQuestions']);
         Route::post('/questions/{questionId}/answer', [TeacherQuestionController::class, 'answerQuestion']);
-    });
+        Route::get('/my-courses', [TeacherexamController::class, 'getMyCourses']);
+        Route::get('/courses/{courseId}/exams', [TeacherexamController::class, 'getCourseExams']);
+
+    // Core Exam Functions
+        Route::post('/exams/create', [TeacherexamController::class, 'createExam']);
+        Route::get('/exams/{examId}/questions', [TeacherexamController::class, 'getExamForMarking']);
+        Route::post('/exams/{examId}/submit-marking', [TeacherexamController::class, 'submitMarkingScheme']);
+        Route::get('/courses/{courseName}/marking-schemes', [TeacherexamController::class, 'getMarkingSchemesByCourse']);
+    }); 
 
     // Student Specific Routes
     Route::prefix('student')->group(function () {

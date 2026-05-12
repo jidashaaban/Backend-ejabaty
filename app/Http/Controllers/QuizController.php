@@ -15,74 +15,95 @@ class QuizController extends Controller
 {
     // 1. Teacher Announces the Quiz
     public function announceQuiz(Request $request)
-    {
-        $user = auth()->user();
+{
+    $user = auth()->user();
 
-        if (!$user || $user->role !== 'teacher') {
-                 return response()->json([
-                      'message' => 'Forbidden: Only Teachers can access this feature.'
-    ], 403);
-}
-        $request->validate([
-            'course_id' => 'required|exists:courses,id',
-            'teacher_id' => 'required|exists:users,id',
-            'quiz_date' => 'required|date',
-            'start_time' => 'required|date_format:H:i',
-            'included_content' => 'required|string',
-        ]);
+    if (!$user || $user->role !== 'teacher') {
+        return response()->json([
+            'message' => 'Forbidden: Only Teachers can access this feature.'
+        ], 403);
+    }
 
-        $teacherCourse = Courses::where('id',$request->course_id)
-            ->where('teacher_id',$request->teacher_id)
-            ->exists();
+    // 1. Updated Validation to require strings instead of IDs
+    $request->validate([
+        'course_name' => 'required|string',
+        'quiz_date' => 'required|date',
+        'start_time' => 'required|date_format:H:i',
+        'included_content' => 'required|string',
+    ]);
 
-        $quizAlreadyExists = Quiz::where('course_id', $request->course_id)
+    // 2. Lookup the Teacher by name
+    $teacher = User::where('name', $request->teacher_name)
+        ->where('role', 'teacher')
+        ->first();
+
+    if (!$teacher) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Error: Teacher "' . $request->teacher_name . '" does not exist.'
+        ], 404);
+    }
+
+    // 3. Lookup the Course by name
+    $course = Courses::where('name', $request->course_name)->first();
+
+    if (!$course) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Error: Course "' . $request->course_name . '" does not exist.'
+        ], 404);
+    }
+
+    // 4. Verify the Teacher teaches this Course
+    // (This replaces your $teacherCourse = Courses::where... check)
+    if ($course->teacher_id !== $teacher->id) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Error: You (or the specified teacher) do not have permission to announce a quiz for a course you do not teach.'
+        ], 403);
+    }
+
+    // 5. Check if Quiz already exists on this date (Using $course->id)
+    $quizAlreadyExists = Quiz::where('course_id', $course->id)
         ->where('quiz_date', $request->quiz_date)
         ->exists();
 
     if ($quizAlreadyExists) {
         return response()->json([
             'success' => false,
-            'message' => 'Error: A quiz is already announced for this course on this specific date. You cannot add another one.'
-        ], 409); // 409 Conflict is the perfect status code for duplicate data
+            'message' => 'Error: A quiz is already announced for this course on this specific date.'
+        ], 409);
     }
-        
-        if(!$teacherCourse) {
-            return response()->json([
-                'success'=>false,
-                'message'=>'Error: you do not have permission to announce a quiz for a course you do not teach'
-            ],403);
-        }
 
-        // Find what day of the week the entered date is (e.g., "Sunday")
-        // Laravel's Carbon makes this very easy:
-        $dayOfWeek = Carbon::parse($request->quiz_date)->format('l');
+    // 6. Schedule Validation logic (Using $course->id)
+    $dayOfWeek = Carbon::parse($request->quiz_date)->format('l');
 
-        // Check if the course actually has a session on this Day and Time
-        $isValidSchedule = Session::where('course_id', $request->course_id)
-            ->where('day', $dayOfWeek)
-            // Assuming your start_time in sessions is stored like '08:00:00'
-            ->where('start_time', '<=', $request->start_time)
-            ->where('end_time', '>', $request->start_time) 
-            ->exists();
+    $isValidSchedule = Session::where('course_id', $course->id)
+        ->where('day', $dayOfWeek)
+        ->where('start_time', '<=', $request->start_time)
+        ->where('end_time', '>', $request->start_time) 
+        ->exists();
 
-        if (!$isValidSchedule) {
-            // This is the error sent to the frontend if the schedule doesn't match
-            return response()->json([
-                'success' => false,
-                'message' => 'Error: The selected date ('.$dayOfWeek.') and time do not match any scheduled sessions for this course.'
-            ], 422); 
-        }
+    if (!$isValidSchedule) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Error: The selected date ('.$dayOfWeek.') and time do not match any scheduled sessions for this course.'
+        ], 422); 
+    }
 
-        // If it passes validation, save the quiz!
-        $quiz = Quiz::create([
-            'course_id' => $request->course_id,
-            'teacher_id' => $request->teacher_id,
-            'quiz_date' => $request->quiz_date,
-            'start_time' => $request->start_time,
-            'included_content' => $request->included_content,
-        ]);
-        $course = Courses::with('students')->find($request->course_id);
-        foreach ($course->students as $student) {
+    // 7. Save the Quiz (Using the looked-up IDs)
+    $quiz = Quiz::create([
+        'course_id' => $course->id,
+        'teacher_id' => $teacher->id,
+        'quiz_date' => $request->quiz_date,
+        'start_time' => $request->start_time,
+        'included_content' => $request->included_content,
+    ]);
+
+    // 8. Notifications logic
+    // We already have the $course model from Step 3, so we can load students directly
+    $course->load('students');
+    foreach ($course->students as $student) {
         $student->notify(new SchoolNotification(
             "Upcoming Quiz!",
             "A new quiz for '" . $course->name . "' has been scheduled for " . $request->quiz_date,
@@ -91,12 +112,19 @@ class QuizController extends Controller
         ));
     }
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Quiz announced successfully!',
-            'quiz' => $quiz
-        ]);
-    }
+    return response()->json([
+        'success' => true,
+        'message' => 'Quiz announced successfully!',
+        'quiz' => [
+            'course_name' => $course->name, // Replaced course_id
+            'quiz_date' => $quiz->quiz_date,
+            'start_time' => $quiz->start_time,
+            'included_content' => $quiz->included_content,
+            'created_at' => $quiz->created_at,
+            'updated_at' => $quiz->updated_at,
+        ]
+    ]);
+}
 
     // 2. Student Views Upcoming Quizzes
     public function studentUpcomingQuizzes($studentId)
@@ -133,44 +161,101 @@ class QuizController extends Controller
         ]);
     }
 
-    public function addQuizMarks(Request $request){
-        $user = auth()->user();
+    public function addQuizMarks(Request $request) {
+    $user = auth()->user();
 
-        if (!$user || $user->role !== 'teacher') {
-             return response()->json([
-                'message' => 'Forbidden: Only Teachers can access this feature.'
-    ], 403);
-}
-        $request->validate([
-            'quiz_id'=>'required|exists:quizzes,id',
-            'student_id'=>'required|exists:users,id',
-            'points'=>'required|numeric',
-            'comment'=>'nullable|string'
-        ]);
+    if (!$user || $user->role !== 'teacher') {
+        return response()->json([
+            'message' => 'Forbidden: Only Teachers can access this feature.'
+        ], 403);
+    }
 
-        $quiz = Quiz::findOrFail($request->quiz_id);
-        if ($quiz->teacher_id !== $request->teacher_id) {
-           return response()->json(['message' => 'Unauthorized'], 403); 
-       }
-       $quiz->students()->syncWithoutDetaching([
-        $request->student_id => [
+    $request->validate([
+        'course_name'  => 'required|string',
+        'student_name' => 'required|string',
+        'points'       => 'required|numeric',
+        'comment'      => 'nullable|string'
+    ]);
+
+    // 1. Check if the Course exists AND if this Teacher teaches it
+    $course = Courses::where('name', $request->course_name)
+        ->where('teacher_id', $user->id)
+        ->first();
+
+    if (!$course) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Error: Course not found or you are not the assigned teacher for this course.'
+        ], 404);
+    }
+
+    // 2. Check if the Student exists
+    $student = User::where('name', $request->student_name)
+        ->where('role', 'student')
+        ->first();
+
+    if (!$student) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Error: Student "' . $request->student_name . '" does not exist.'
+        ], 404);
+    }
+
+    // 3. Check if this specific Student is enrolled in this specific Course
+    $isEnrolled = DB::table('user_course') // Ensure this matches your pivot table name
+        ->where('user_id', $student->id)
+        ->where('course_id', $course->id)
+        ->exists();
+
+    if (!$isEnrolled) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Error: This student is not enrolled in ' . $course->name
+        ], 403);
+    }
+
+    // 4. Find the Quiz for this course 
+    // Since we aren't using quiz_id, we fetch the most recent quiz created for this course
+    $quiz = Quiz::where('course_id', $course->id)
+        ->where('teacher_id', $user->id)
+        ->latest()
+        ->first();
+
+    if (!$quiz) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Error: No quiz found for this course to add marks to.'
+        ], 404);
+    }
+
+    // 5. Update the pivot table (marks and comments)
+    $quiz->students()->syncWithoutDetaching([
+        $student->id => [
             'points' => $request->points,
             'comment' => $request->comment
         ]
-     ]);
-        $student = User::find($request->student_id);
-        if ($student) {
-           $student->notify(new SchoolNotification(
-               "Quiz Result Published",
-               "Your marks for the quiz in '" . $quiz->course->name . "' are now available. Points: " . $request->points,
-               "quiz_mark",
-               $quiz->id
+    ]);
 
+    // 6. Notify the student
+    if ($student) {
+        $student->notify(new SchoolNotification(
+            "Quiz Result Published",
+            "Your marks for the quiz in '" . $course->name . "' are now available. Points: " . $request->points,
+            "quiz_mark",
+            $quiz->id
         ));
     }
-     return response()->json(['message' => 'Points and comment added successfully!']);
 
-    }
+    return response()->json([
+        'success' => true,
+        'message' => 'Points and comment added successfully!',
+        'data' => [
+            'student' => $student->name,
+            'course' => $course->name,
+            'points' => $request->points
+        ]
+    ]);
+}
 
     public function getPastQuizzes($studentId) {
         $user = auth()->user();
