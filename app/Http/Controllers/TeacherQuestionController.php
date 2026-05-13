@@ -8,7 +8,7 @@ use App\Models\User;
 
 class TeacherQuestionController extends Controller
 {
-    public function pendingQuestions(Request $request,$teacherId)
+    public function pendingQuestions(Request $request)
     {
         $requester = auth()->user();
         if (!$requester || $requester->role !== 'teacher') {
@@ -17,7 +17,7 @@ class TeacherQuestionController extends Controller
     ], 403);
 }
         // Fetch questions that haven't been answered yet
-        $questions = Question::where('teacher_id', $teacherId)
+        $questions = Question::where('teacher_id', $requester->id)
             ->where('is_answered', false)
             ->with('student:id,name') 
             ->get();
