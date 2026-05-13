@@ -298,5 +298,153 @@ class QuizController extends Controller
         'past_quizzes' => $formattedQuizzes 
     ]);
 }
+// Retrieve all quizzes announced by this teacher
+public function getTeacherQuizzes()
+{
+    $user = auth()->user();
+
+    // Security Check
+    if (!$user || $user->role !== 'teacher') {
+        return response()->json(['message' => 'Unauthorized'], 403);
+    }
+
+    $quizzes = Quiz::where('teacher_id', $user->id)
+        ->with('course:id,name') // Include course name
+        ->orderBy('quiz_date', 'desc')
+        ->get();
+
+    return response()->json([
+        'success' => true,
+        'quizzes' => $quizzes
+    ]);
+}
+// Update an existing quiz announcement
+public function updateQuiz(Request $request, $quizId)
+{
+    $user = auth()->user();
+    $quiz = Quiz::where('id', $quizId)->where('teacher_id', $user->id)->firstOrFail();
+
+    $request->validate([
+        'quiz_date' => 'required|date',
+        'start_time' => 'required|date_format:H:i',
+        'included_content' => 'required|string',
+    ]);
+
+    // Schedule Validation Logic
+    $dayOfWeek = Carbon::parse($request->quiz_date)->format('l');
+    $isValidSchedule = Session::where('course_id', $quiz->course_id)
+        ->where('day', $dayOfWeek)
+        ->where('start_time', '<=', $request->start_time)
+        ->where('end_time', '>', $request->start_time)
+        ->exists();
+
+    if (!$isValidSchedule) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Error: The new date/time does not match the course schedule.'
+        ], 422);
+    }
+
+    $quiz->update([
+        'quiz_date' => $request->quiz_date,
+        'start_time' => $request->start_time,
+        'included_content' => $request->included_content,
+    ]);
+
+    return response()->json([
+        'success' => true,
+        'message' => 'Quiz updated successfully!',
+        'quiz' => $quiz
+    ]);
+}
+// Retrieve students and their marks for a specific quiz
+public function getQuizMarksForTeacher($quizId)
+{
+    $user = auth()->user();
+    
+    // Ensure the teacher owns this quiz
+    $quiz = Quiz::where('id', $quizId)->where('teacher_id', $user->id)->first();
+
+    if (!$quiz) {
+        return response()->json(['message' => 'Quiz not found or unauthorized'], 404);
+    }
+
+    // Fetch all students enrolled in the course linked to this quiz
+    // and include their pivot data (points/comment) for this specific quiz
+    $studentsWithMarks = User::whereHas('courses', function($query) use ($quiz) {
+            $query->where('courses.id', $quiz->course_id);
+        })
+        ->with(['quizzes' => function($query) use ($quizId) {
+            $query->where('quiz_id', $quizId); // Only get marks for THIS quiz
+        }])
+        ->get()
+        ->map(function($student) {
+            $quizData = $student->quizzes->first();
+            return [
+                'student_id' => $student->id,
+                'student_name' => $student->name,
+                'points' => $quizData ? $quizData->pivot->points : null,
+                'comment' => $quizData ? $quizData->pivot->comment : null,
+            ];
+        });
+
+    return response()->json([
+        'success' => true,
+        'quiz_content' => $quiz->included_content,
+        'students' => $studentsWithMarks
+    ]);
+}
+// Update an existing mark for a specific student
+public function updateStudentMark(Request $request, $quizId, $studentId)
+{
+    $user = auth()->user();
+
+    // 1. Security Check: Ensure only the teacher who created the quiz can edit marks
+    $quiz = Quiz::where('id', $quizId)
+                ->where('teacher_id', $user->id)
+                ->first();
+
+    if (!$quiz) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Unauthorized: You can only edit marks for quizzes you announced.'
+        ], 403);
+    }
+
+    // 2. Validation
+    $request->validate([
+        'points'  => 'required|numeric',
+        'comment' => 'nullable|string'
+    ]);
+
+    // 3. Update the Pivot Table (quiz_student)
+    // syncWithoutDetaching updates the points if the student is already linked
+    $quiz->students()->syncWithoutDetaching([
+        $studentId => [
+            'points' => $request->points,
+            'comment' => $request->comment
+        ]
+    ]);
+
+    // 4. Optional: Notify the student that their grade was updated
+    $student = User::find($studentId);
+    if ($student) {
+        $student->notify(new SchoolNotification(
+            "Quiz Mark Updated",
+            "Your marks for the quiz in '" . $quiz->course->name . "' have been updated to: " . $request->points,
+            "quiz_mark_update",
+            $quiz->id
+        ));
+    }
+
+    return response()->json([
+        'success' => true,
+        'message' => 'Mark updated successfully!',
+        'updated_data' => [
+            'student' => $student->name,
+            'new_points' => $request->points
+        ]
+    ]);
+}
 
 }

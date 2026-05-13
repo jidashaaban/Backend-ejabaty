@@ -88,13 +88,14 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/dashboard', [TeacherDashboardController::class, 'getDashboardStats']);
         Route::post('/announce-quiz', [QuizController::class, 'announceQuiz']);
         Route::post('/quiz/submit-points', [QuizController::class, 'addQuizMarks']);
-        Route::post('/exams/create', [TeacherExamController::class, 'createExam']);
-        Route::get('/exams/{examId}', [TeacherExamController::class, 'getExamForMarking']);
-        Route::post('/exams/{examId}/submit-marking', [TeacherExamController::class, 'submitMarkingScheme']);
         Route::get('/questions/pending', [TeacherQuestionController::class, 'pendingQuestions']);
         Route::post('/questions/{questionId}/answer', [TeacherQuestionController::class, 'answerQuestion']);
         Route::get('/my-courses', [TeacherexamController::class, 'getMyCourses']);
         Route::get('/courses/{courseId}/exams', [TeacherexamController::class, 'getCourseExams']);
+        Route::get('/my-quizzes', [QuizController::class, 'getTeacherQuizzes']);
+        Route::put('/quizzes/{id}', [QuizController::class, 'updateQuiz']);
+        Route::get('/quizzes/{id}/marks', [QuizController::class, 'getQuizMarksForTeacher']);
+        Route::put('/quizzes/{quizId}/students/{studentId}/mark', [QuizController::class, 'updateStudentMark']);
 
     // Core Exam Functions
         Route::post('/exams/create', [TeacherexamController::class, 'createExam']);
