@@ -20,7 +20,7 @@ class ParentDashboardController extends Controller
         if(!$parent){
             return response()->json(['error'=>'Parent account not found'],404);
         }
-        $student = $parent->children()->where('users.id', $childId)->first();
+        $student = $parent->children()->where('users.id', $childId)->with(['exams.course','quizzes.course'])->first();
         if (!$student) {
             return response()->json(['message' => 'Student does not belong to this account or does not exist.'], 403);
         }
@@ -38,6 +38,7 @@ class ParentDashboardController extends Controller
         $quizzes = $student->quizzes()->get()->map(function ($quiz) {
             return [
                 'course_name' => $quiz->course->name ?? 'Unknown Course',
+                'quiz_date'=>$quiz->quiz_date,
                 'points' => $quiz->pivot->points ?? 'Not Graded',
                 'comment' => $quiz->pivot->comment ?? 'No Comment',
                 

@@ -55,7 +55,7 @@ class ComplaintController extends Controller
     }
 
     // Admin answers a complaint
-    public function answerComplaint(Request $request, $adminId, $complaintId)
+    public function answerComplaint(Request $request, $complaintId)
     {
         $user = auth()->user();
 
@@ -64,21 +64,14 @@ class ComplaintController extends Controller
                  'message' => 'Forbidden: Only Administrators can perform this action.'
     ], 403);
 }
-        $admin = User::where('id', $adminId)->where('role', 'admin')->first();
-    
-    if (!$admin) {
-        return response()->json([
-            'success' => false, 
-            'message' => 'Unauthorized. Only administrators can answer complaints.'
-        ], 403); // 403 Forbidden
-    }
+        
 
         $request->validate([
             'answer_text' => 'required|string',
         ]);
 
         $complaint = Complaint::findOrFail($complaintId);
-
+        $adminId = $request->user()->id;
         if ($complaint->answer_text !== null) {
         return response()->json([
             'success' => false, 

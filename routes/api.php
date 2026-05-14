@@ -61,7 +61,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
         // Complaint Management
         Route::post('/complaints/{complaintId}/answer', [ComplaintController::class, 'answerComplaint']);
-        Route::put('/complaints/{id}/answer', [ComplaintController::class, 'updateAnswer']);
+        Route::put('/complaints/{complaintId}/answer', [ComplaintController::class, 'updateAnswer']);
         Route::get('/complaints', [ComplaintController::class, 'getAllComplaints']);
         
         // --- POLL MANAGEMENT (FIXED: Removed redundant /admin paths) ---
