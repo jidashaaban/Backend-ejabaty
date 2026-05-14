@@ -9,7 +9,7 @@ use App\Notifications\SchoolNotification;
 
 class ComplaintController extends Controller
 {
-    public function submitComplaint(Request $request, $parentId)
+    public function submitComplaint(Request $request)
     {
         $user = auth()->user();
         if (!$user || $user->role !== 'parent') {
@@ -23,7 +23,7 @@ class ComplaintController extends Controller
         ]);
 
         $complaint = Complaint::create([
-            'parent_id' => $parentId,
+            'parent_id' => $user->id,
             'subject' => $request->subject,
             'complaint_text' => $request->complaint_text,
         ]);
@@ -41,7 +41,7 @@ class ComplaintController extends Controller
     }
 
     // Parent views their complaints and admin answers
-    public function viewComplaints(Request $request,$parentId)
+    public function viewComplaints(Request $request)
     {
         $user = auth()->user();
 
@@ -50,7 +50,7 @@ class ComplaintController extends Controller
                  'message' => 'Forbidden: Only Parents can view this dashboard.'
     ], 403);
 }
-        $complaints = Complaint::where('parent_id', $parentId)->get();
+        $complaints = Complaint::where('parent_id', $user->id)->get();
         return response()->json(['success' => true, 'complaints' => $complaints]);
     }
 
@@ -144,5 +144,81 @@ public function getAllComplaints(Request $request)
         'count' => $complaints->count(),
         'data' => $complaints
     ]);
+}
+public function updateComplaint(Request $request, $id)
+    {
+        $user = auth()->user();
+
+        if (!$user || $user->role !== 'parent') {
+            return response()->json(['message' => 'Forbidden.'], 403);
+        }
+
+        // Find the complaint belonging to this parent
+        $complaint = Complaint::where('id', $id)->where('parent_id', $user->id)->first();
+
+        if (!$complaint) {
+            return response()->json(['message' => 'Complaint not found.'], 404);
+        }
+
+        // Logic: Cannot update if the admin has already answered or resolved it
+        if ($complaint->answer_text !== null && $complaint->answer_text !== '') {
+            return response()->json(['message' => 'Cannot update a complaint that has already been answered.'], 400);
+        }
+
+        $request->validate([
+            'subject' => 'required|string',
+            'complaint_text' => 'required|string',
+        ]);
+
+        $complaint->update([
+            'subject' => $request->subject,
+            'complaint_text' => $request->complaint_text,
+        ]);
+
+        return response()->json([
+            'success' => true, 
+            'message' => 'Complaint updated successfully.', 
+            'complaint' => $complaint
+        ]);
+    }
+
+    // 2. Parent deletes a complaint
+    public function deleteComplaint($id)
+{
+    $user = auth()->user();
+    $complaint = Complaint::find($id);
+
+    // 1. Check if complaint exists
+    if (!$complaint) {
+        return response()->json(['message' => 'Complaint not found.'], 404);
+    }
+
+    // 2. ADMIN LOGIC: Can delete anything
+    if ($user->role === 'admin') {
+        $complaint->delete();
+        return response()->json([
+            'success' => true, 
+            'message' => 'Administrative Action: Complaint deleted successfully.'
+        ]);
+    }
+
+    // 3. PARENT LOGIC: Can only delete their OWN if it's still PENDING
+    if ($user->role === 'parent') {
+        // Ownership check
+        if ($complaint->parent_id !== $user->id) {
+            return response()->json(['message' => 'Access Denied: You can only delete your own complaints.'], 403);
+        }
+
+        // Status check: Prevent deleting if Admin already started working on it
+        if ($complaint->answer_text !== null || $complaint->status === 'resolved') {
+            return response()->json(['message' => 'Cannot delete a complaint that has already been answered.'], 400);
+        }
+
+        $complaint->delete();
+        return response()->json(['success' => true, 'message' => 'Your complaint has been removed.']);
+    }
+
+    // 4. Default Forbidden for other roles (Teachers, etc.)
+    return response()->json(['message' => 'Forbidden: You do not have permission to delete this record.'], 403);
 }
 }

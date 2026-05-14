@@ -125,6 +125,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/child/{childId}/exam-schedule', [ParentDashboardController::class, 'getChildExamSchedule']);
         Route::post('/complaints/submit', [ComplaintController::class, 'submitComplaint']);
         Route::get('/complaints', [ComplaintController::class, 'viewComplaints']);
+        Route::put('/complaints/{id}', [ComplaintController::class, 'updateComplaint']);
+        Route::delete('/complaints/{id}', [ComplaintController::class, 'deleteComplaint']);
     });
 
     // Notifications

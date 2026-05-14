@@ -8,16 +8,15 @@ use App\Models\Schedule;
 
 class ParentDashboardController extends Controller
 {
-    public function getChildProgress(Request $request, $parentId, $childId)
+    public function getChildProgress(Request $request, $childId)
     {
-        $user = auth()->user();
+        $parent = auth()->user();
 
-        if (!$user || $user->role !== 'parent') {
+        if (!$parent || $parent->role !== 'parent') {
               return response()->json([
                 'message' => 'Forbidden: Only Parents can view this dashboard.'
     ], 403);
 } 
-        $parent =User::where('id',$parentId)->where('role','parent')->first();
         if(!$parent){
             return response()->json(['error'=>'Parent account not found'],404);
         }
@@ -53,16 +52,15 @@ class ParentDashboardController extends Controller
         ]);
     }
 
-    public function getChildExamSchedule(Request $request, $parentId, $childId)
+    public function getChildExamSchedule(Request $request, $childId)
     {
-        $user = auth()->user();
+        $parent = auth()->user();
 
-       if (!$user || $user->role !== 'parent') {
+       if (!$parent || $parent->role !== 'parent') {
               return response()->json([
                  'message' => 'Forbidden: Only Parents can view this dashboard.'
     ], 403);
 }
-        $parent = User::where('id', $parentId)->where('role', 'parent')->first();
     
     if (!$parent) {
         return response()->json(['error' => 'Parent account not found.'], 404);
