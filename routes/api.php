@@ -117,6 +117,10 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/exam-history', [StudentMarkingSchemeController::class, 'getMyExamsAndMarks']);
         Route::post('/questions/ask', [StudentQuestionController::class, 'askQuestion']);
         Route::get('/questions', [StudentQuestionController::class, 'myQuestions']);
+        Route::get('/polls/{pollId}', [PollController::class, 'showPoll']);
+        Route::post('/polls/{pollId}/submit', [PollController::class, 'submitAnswers']);
+        Route::put('/questions/{id}', [StudentQuestionController::class, 'updateQuestion']);
+        Route::delete('/questions/{id}', [StudentQuestionController::class, 'deleteQuestion']);
     });
 
     // Parent Specific Routes

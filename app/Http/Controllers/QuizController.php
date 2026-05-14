@@ -127,14 +127,15 @@ class QuizController extends Controller
 }
 
     // 2. Student Views Upcoming Quizzes
-    public function studentUpcomingQuizzes($studentId)
+    public function studentUpcomingQuizzes(Request $request)
     {
-        $user = auth()->user();
+        $user = $request->user();
         if (!$user || $user->role !== 'student') {
              return response()->json([
                  'message' => 'Forbidden: You can only access your own records'
     ], 403);
 }
+        $studentId = $user->id;
         // Get all course IDs that the student is enrolled in
         $studentCourseIds = \DB::table('user_course')
             ->where('user_id', $studentId)
@@ -257,14 +258,15 @@ class QuizController extends Controller
     ]);
 }
 
-    public function getPastQuizzes($studentId) {
-        $user = auth()->user();
+    public function getPastQuizzes(Request $request) {
+        $user = $request->user();
 
         if (!$user || $user->role !== 'student') {
             return response()->json([
                'message' => 'Forbidden: You can only access your own records.'
     ], 403);
 } 
+    $studentId = $user->id;
     // 1. Get IDs of courses the student is enrolled in
     $enrolledCourseIds = DB::table('user_course') // or course_student
         ->where('user_id', $studentId)

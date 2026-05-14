@@ -8,56 +8,55 @@ use App\Models\Exam;
 
 class StudentMarkingSchemeController extends Controller
 {
-    public function getMyExamsAndMarks(Request $request,$studentId)
-    {
-        $requester = auth()->user();
+    public function getMyExamsAndMarks(Request $request)
+{
+    // 1. Get the authenticated student from the Token
+    $student = $request->user();
 
-    // Ensure the requester is a student AND they are looking at THEIR OWN data
-    if (!$requester || $requester->role !== 'student' || $requester->id != $studentId) {
+    // 2. Security Check
+    if (!$student || $student->role !== 'student') {
         return response()->json([
-            'message' => 'Unauthorized: You can only view your own marking schemes.'
+            'message' => 'Unauthorized: This area is for students only.'
         ], 403);
     }
-        // 1. Find the student and their exams (including the pivot 'mark')
-        $student = User::with(['exams' => function($query) {
-            // Only get exams that are published
-            $query->where('is_published', true)
-                  // Load the questions and the pivot 'answer' (the marking scheme)
-                  ->with(['questions' => function($q) {
-                      $q->select('exam_questions.id', 'exam_questions.question') // the "what"
-                        ->withPivot('answer'); // the contextual answer
-                  }]); 
-        }])->findOrFail($studentId);
 
-        if ($student->exams->isEmpty()) {
+    // 3. Fetch the data using the student's ID
+    // We query the User model to load the nested relationships
+    $studentData = User::with(['exams' => function($query) {
+        $query->where('is_published', true) // Only show marks if the exam is published
+              ->with(['course','questions' => function($q) {
+                  $q->select('exam_questions.id', 'exam_questions.question')
+                    ->withPivot('answer'); // The correct answer for the marking scheme
+              }]); 
+    }])->findOrFail($student->id);
+
+    // 4. Handle Case: No exams found
+    if ($studentData->exams->isEmpty()) {
         return response()->json([
-            'message' => 'no exam history',
+            'message' => 'No exam history found.',
             'data' => []
-        ], 200); // Keeping it as 200 (Success) so the frontend doesn't crash, but gives the clear message
-    }
-
-        // 2. Format the data nicely for the frontend
-        $examHistory = $student->exams->map(function($exam) {
-            return [
-                'exam_id' => $exam->id,
-                'title' => $exam->title,
-                'course_id' => $exam->course_id,
-                'my_mark' => $exam->pivot->mark, // Pulled from the exam_student pivot
-                'marking_scheme' => $exam->questions->map(function($question) {
-                    return [
-                        'question_id' => $question->id,
-                        'question_text' => $question->question,
-                        'correct_answer' => $question->pivot->answer,
-                    ];
-                })
-            ];
-        });
-
-        // 3. Return the payload
-        // Students hit one endpoint and get a list of all their subjects' marking schemes (Questions + Answers) in one clean JSON object[cite: 71].
-        return response()->json([
-            'message' => 'Exam history and marking schemes retrieved successfully.',
-            'data' => $examHistory
         ], 200);
     }
+
+    // 5. Format the data for your React Frontend
+    $examHistory = $studentData->exams->map(function($exam) {
+        return [
+            'exam_id' => $exam->id,
+            'title' => $exam->title,
+            'course_name' => $exam->course->name ?? 'Unknown Course',
+            'my_mark' => $exam->pivot->mark, // Pulled from the exam_student pivot table
+            'marking_scheme' => $exam->questions->map(function($question) {
+                return [
+                    'question_text' => $question->question,
+                    'correct_answer' => $question->pivot->answer, // From exam_question pivot
+                ];
+            })
+        ];
+    });
+
+    return response()->json([
+        'message' => 'Exam history and marking schemes retrieved successfully.',
+        'data' => $examHistory
+    ], 200);
+}
 }

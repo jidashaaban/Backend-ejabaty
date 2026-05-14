@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 class PollVote extends Model
 {
     use HasFactory;
-    protected $fillable = ['user_id', 'poll_option_id'];
+    protected $fillable = ['user_id' ,'poll_option_id'];
 
     public function option()
     {

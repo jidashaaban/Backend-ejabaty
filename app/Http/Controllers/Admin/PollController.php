@@ -8,7 +8,9 @@ use App\Models\Poll;
 use App\Models\User;
 use App\Models\PollQuestion;
 use App\Models\PollOption;
+use App\Models\PollVote;
 use App\Notifications\SchoolNotification;
+use Illuminate\Support\Facades\DB;
 
 class PollController extends Controller
 {
@@ -179,4 +181,56 @@ class PollController extends Controller
         $option->delete();
         return response()->json(['message' => 'Option deleted']);
     }
+    public function showPoll($pollId)
+    {
+        // Eager load questions and their specific options
+        $poll = Poll::with('questions.options')->findOrFail($pollId);
+
+        return response()->json([
+            'success' => true,
+            'poll' => $poll
+        ]);
+    }
+
+    // STEP 2: Answer the poll
+    public function submitAnswers(Request $request, $pollId)
+{
+    // 1. Get the student from the Token
+    $student = $request->user();
+
+    // 2. Validation: Only validate the option_id since that's what you store
+    $request->validate([
+        'answers' => 'required|array',
+        'answers.*.option_id' => 'required|exists:poll_options,id',
+    ]);
+
+    // 3. Extract the option IDs from the request
+    $optionIds = collect($request->answers)->pluck('option_id');
+
+    // 4. Security: Check if this user has already voted for these specific options
+    $alreadyVoted = PollVote::where('user_id', $student->id)
+        ->whereIn('poll_option_id', $optionIds)
+        ->exists();
+
+    if ($alreadyVoted) {
+        return response()->json([
+            'message' => 'You have already submitted these answers.'
+        ], 400);
+    }
+
+    // 5. Save the votes using a Database Transaction
+    DB::transaction(function () use ($request, $student) {
+        foreach ($request->answers as $answer) {
+            PollVote::create([
+                'user_id'        => $student->id,
+                'poll_option_id' => $answer['option_id'],
+            ]);
+        }
+    });
+
+    return response()->json([
+        'success' => true,
+        'message' => 'Your votes for poll #' . $pollId . ' have been recorded.'
+    ]);
+}
 }
