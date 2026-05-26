@@ -36,7 +36,8 @@ class SpecialScheduleController extends Controller
 
         if ($user->role === 'student') {
             $sessionsQuery->whereHas('course.students', function($query) use ($user) {
-                $query->where('users.id', $user->id);
+                $query->where('users.id', $user->id)
+                      ->where('user_course.is_active',true);
             });
 
             // UPDATE: Load 'hall' for courses and 'hallAssignments' for exams [cite: 48, 144]

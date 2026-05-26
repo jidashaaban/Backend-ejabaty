@@ -12,7 +12,7 @@ class User extends Authenticatable
 {
     public function courses() {
         return $this->belongsToMany(Courses::class, 'user_course', 'user_id', 'course_id')
-                    ->withPivot('status', 'booked_at')
+                    ->withPivot('status', 'booked_at','is_active')
                     ->withTimestamps();
     }
 
