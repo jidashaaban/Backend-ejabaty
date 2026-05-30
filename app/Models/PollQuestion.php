@@ -12,7 +12,7 @@ class PollQuestion extends Model
 
 public function options()
 {
-    return $this->hasMany(PollOption::class);
+    return $this->hasMany(PollOption::class, 'poll_question_id');
 }
 
 public function poll()

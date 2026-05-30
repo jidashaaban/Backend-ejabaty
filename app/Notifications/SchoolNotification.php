@@ -63,4 +63,5 @@ class SchoolNotification extends Notification
             'related_id' => $this->related_id,
         ];
     }
+    
 }

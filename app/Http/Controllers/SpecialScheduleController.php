@@ -37,7 +37,7 @@ class SpecialScheduleController extends Controller
         if ($user->role === 'student') {
             $sessionsQuery->whereHas('course.students', function($query) use ($user) {
                 $query->where('users.id', $user->id)
-                      ->where('user_course.is_active',true);
+                  ->where('user_course.is_active', true);
             });
 
             // UPDATE: Load 'hall' for courses and 'hallAssignments' for exams [cite: 48, 144]
@@ -93,33 +93,48 @@ class SpecialScheduleController extends Controller
     public function filterExamSchedule(Request $request) 
 {
     $user = $request->user();
-    if (!$user ) {
+    if (!$user) {
         return response()->json(['message' => 'Unauthorized'], 403);
-    } 
+    }
     $userId = $user->id;
-    // 1. Find the student and their enrolled course IDs [cite: 129]
-    $studentCourseIds = $user->courses()->pluck('courses.id');
 
-    // 2. Find the latest "exam" type master schedule [cite: 22, 124]
+    // 1. Get enrolled course IDs (active registrations only)
+    $studentCourseIds = $user->courses()
+        ->wherePivot('is_active', true)
+        ->pluck('courses.id');
+
+    // 2. Find the latest exam schedule
     $latestExamSchedule = Schedule::where('type', 'exam')->latest()->first();
 
     if (!$latestExamSchedule) {
         return response()->json(['message' => 'No exam schedule found.'], 404);
     }
 
-    // 3. Fetch only the sessions matching those courses and simplify the output [cite: 64, 120]
-    $tasks = Session::where('schedule_id', $latestExamSchedule->id)
+    // 3. Return full session data needed by the frontend
+    $sessions = Session::where('schedule_id', $latestExamSchedule->id)
         ->whereIn('course_id', $studentCourseIds)
-        ->with('course')
+        ->with(['course', 'hallAssignments' => function($query) use ($userId) {
+            $query->where('student_id', $userId)->with('hall');
+        }])
         ->get()
-        ->map(function ($session) {
+        ->map(function ($session) use ($userId) {
+            $hall = $session->hallAssignments->first()?->hall?->name ?? 'غير محدد';
             return [
-                'exam_name' => $session->course->name, // Displays only the name [cite: 23, 27]
-                'date' => Carbon::parse($session->date)->format('d/m/Y') // Displays only the day/date [cite: 22, 122]
+                'id'         => $session->id,
+                'course'     => $session->course->name ?? '-',
+                'day'        => $session->day,
+                'date'       => $session->date ? Carbon::parse($session->date)->format('d/m/Y') : '-',
+                'start_time' => $session->start_time,
+                'end_time'   => $session->end_time,
+                'hall'       => $hall,
+                'room_name'  => $hall,
             ];
         });
 
-    return response()->json($tasks);
+    return response()->json([
+        'success' => true,
+        'exams'   => $sessions,
+    ]);
 }
     public function index(Request $request)
     {
@@ -137,7 +152,8 @@ class SpecialScheduleController extends Controller
 
         if ($user->role === 'student') {
             $sessionsQuery->whereHas('course.students', function($query) use ($user) {
-                $query->where('users.id', $user->id);
+                $query->where('users.id', $user->id)
+                 ->where('user_course.is_active', true);
             });
 
             if ($type === 'course') {

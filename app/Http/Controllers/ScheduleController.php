@@ -61,10 +61,13 @@ class ScheduleController extends Controller
         ], 404);
     }
 
-    // 3. Define the Grid Constraints (Sunday-Thursday, 8am-3pm)
+    // 3. Define the Grid Constraints (Sunday-Thursday, 8am-5pm)
     $days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday'];
-    // We match the time slots used in your generator logic
-    $timeSlots = ['08:00:00', '09:30:00', '11:00:00', '12:30:00', '14:00:00', '15:30:00'];
+    // We match the time slots used in the generator logic.  A 17:00 slot
+    // was previously omitted which caused sessions scheduled at 17:00 to
+    // disappear from the admin view.  Adding it here ensures all
+    // sessions are represented in the grid.
+    $timeSlots = ['08:00:00', '09:30:00', '11:00:00', '12:30:00', '14:00:00', '15:30:00', '17:00:00'];
 
     // 4. Eager load everything needed, including the hall assignments for exams
     $schedule->load(['sessions.course', 'sessions.hall', 'sessions.hallAssignments.hall']);

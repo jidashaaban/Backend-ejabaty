@@ -14,19 +14,28 @@ class AdminSeeder extends Seeder
     public function run(): void
     {
         User::updateOrCreate(
+            ['email' => 'admin@school.com'],
+            [
+                'name' => 'Admin',
+                'father_name' => 'System',
+                'last_name' => 'Main',
+                'password' => Hash::make('admin123'),
+                'role' => 'admin',
+                'phone_number' => '0111111111',
+                'status' => 'active',
+            ]
+        );
+
+        User::updateOrCreate(
             ['email' => 'registrar@school.com'],
             [
                 'name' => 'School',
-                'father_name' => 'System', // Added to prevent DB error
-                'last_name' => 'Registrar', // Added to prevent DB error
+                'father_name' => 'System',
+                'last_name' => 'Registrar',
                 'password' => Hash::make('password123'),
                 'role' => 'admin',
-                'phone_number' => '00000000', // Added to prevent DB error
-                'status' => 'active',        // Added to prevent DB error
-                'health_state' => null,
-                'grade' => null,
-                'past_education' => null,
-                'last_years_mark' => null,
+                'phone_number' => '00000000',
+                'status' => 'active',
             ]
         );
     }

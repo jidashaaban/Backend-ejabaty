@@ -133,6 +133,19 @@ class ReportController extends Controller
                 ];
             });
     }
+    elseif ($role === 'admin') {
+    $reportContent = \App\Models\User::where('role', 'admin')
+        ->withCount(['polls', 'schedules'])
+        ->get()
+        ->map(function ($admin) {
+            return [
+                'name'                       => $admin->name,
+                'total_polls_created'        => $admin->polls_count,
+                'total_schedules_generated'  => $admin->schedules_count,
+            ];
+        });
+}
+    
 
     // 4. Check if we actually found any users to report on
     if (!$reportContent || $reportContent->isEmpty()) {

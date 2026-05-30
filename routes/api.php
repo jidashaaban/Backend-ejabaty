@@ -22,6 +22,7 @@ use App\Http\Controllers\ParentDashboardController;
 use App\Http\Controllers\ComplaintController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\CourseRegistrationController;
 use App\Http\Controllers\TeacherDashboardController;
 
 /* --- Public Routes --- */
@@ -40,7 +41,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/reports', [ReportController::class, 'getUserReports']);
         Route::post('/reports/save', [ReportController::class, 'generateAndSaveReport']);
         Route::get('/reports/history', [ReportController::class, 'getSavedReportsHistory']);
-        
+        Route::get('/polls/{id}/results', [PollController::class, 'results']);
+
         // Course Management (FIXED: Used correct class name AdminCourseController)
         Route::get('/courses', [AdminCourseController::class, 'index']);
         Route::get('/courses/{id}', [AdminCourseController::class, 'show']);
@@ -48,11 +50,14 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::delete('/courses/{id}', [AdminCourseController::class, 'destroy']);
         Route::post('/add-course', [AdminCourseController::class, 'store']);
         Route::post('/confirm-payment', [AdminCourseController::class, 'confirmPayment']);
+        Route::get('/course-registrations/pending', [CourseRegistrationController::class, 'getPendingRegistrations']);
+        Route::post('/course-registrations/activate', [CourseRegistrationController::class, 'activateCourse']);
+        Route::post('/course-registrations/reject', [CourseRegistrationController::class, 'rejectRegistration']);
 
-        // User & Hall Management
         Route::get('/simple-students', function() {
             return App\Models\User::where('role','student')->select('id','name','email')->get();
         });
+        Route::get('/available-students', [UserController::class, 'availableStudents']);
         Route::post('/users', [UserController::class, 'store']);
         Route::post('/setup-halls', [HallController::class, 'store']);
         Route::get('/halls', [HallController::class, 'index']);
@@ -92,6 +97,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/questions/{questionId}/answer', [TeacherQuestionController::class, 'answerQuestion']);
         Route::get('/my-courses', [TeacherexamController::class, 'getMyCourses']);
         Route::get('/courses/{courseId}/exams', [TeacherexamController::class, 'getCourseExams']);
+        Route::get('/exams', [TeacherexamController::class, 'getExamsByCourseName']);
         Route::get('/my-quizzes', [QuizController::class, 'getTeacherQuizzes']);
         Route::put('/quizzes/{id}', [QuizController::class, 'updateQuiz']);
         Route::get('/quizzes/{id}/marks', [QuizController::class, 'getQuizMarksForTeacher']);
@@ -102,6 +108,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/exams/{examId}/questions', [TeacherexamController::class, 'getExamForMarking']);
         Route::post('/exams/{examId}/submit-marking', [TeacherexamController::class, 'submitMarkingScheme']);
         Route::get('/courses/{courseName}/marking-schemes', [TeacherexamController::class, 'getMarkingSchemesByCourse']);
+        Route::get('/exams/{examId}/students', [TeacherexamController::class, 'getExamStudents']);
+        Route::post('/exams/{examId}/grades', [TeacherexamController::class, 'saveExamGrades']);
     }); 
 
     // Student Specific Routes
@@ -110,11 +118,19 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/upcoming-exams', [SpecialScheduleController::class, 'filterExamSchedule']);
         Route::get('/upcoming-quizzes', [QuizController::class, 'studentUpcomingQuizzes']);
         Route::get('/past-quizzes', [QuizController::class, 'getPastQuizzes']);
+        Route::get('/my-points', [QuizController::class, 'getMyPoints']);
+        Route::get('/my-notes', [QuizController::class, 'getMyNotes']);
         Route::get('/available-courses', [StudentCourseController::class, 'availableCourses']);
         Route::post('/courses/{courseId}/join', [StudentCourseController::class, 'joinCourse']);
         Route::get('/my-courses', [StudentCourseController::class, 'myCourses']);
+        
+        Route::post('/courses/{courseId}/register', [CourseRegistrationController::class, 'registerCourse']);
+        Route::get('/active-courses', [CourseRegistrationController::class, 'getActiveCourses']);
+        Route::get('/pending-courses', [CourseRegistrationController::class, 'getPendingCourses']);
+        
         Route::get('/polls', [PollController::class, 'index']);
         Route::get('/exam-history', [StudentMarkingSchemeController::class, 'getMyExamsAndMarks']);
+        Route::get('/exam-papers', [StudentMarkingSchemeController::class, 'getMyExamPapers']);
         Route::post('/questions/ask', [StudentQuestionController::class, 'askQuestion']);
         Route::get('/questions', [StudentQuestionController::class, 'myQuestions']);
         Route::get('/polls/{pollId}', [PollController::class, 'showPoll']);
@@ -125,8 +141,16 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Parent Specific Routes
     Route::prefix('parent')->group(function () {
+        // Endpoint to fetch all children linked to the authenticated parent
+        Route::get('/children', [ParentDashboardController::class, 'getChildren']);
+
+        // Endpoints to fetch a specific child's progress and exam schedule
         Route::get('/child/{childId}/progress', [ParentDashboardController::class, 'getChildProgress']);
         Route::get('/child/{childId}/exam-schedule', [ParentDashboardController::class, 'getChildExamSchedule']);
+        Route::get('/child/{childId}/grades', [ParentDashboardController::class, 'getChildGrades']);
+        Route::get('/child/{childId}/notes', [ParentDashboardController::class, 'getChildNotes']);
+
+        // Complaint management for parents
         Route::post('/complaints/submit', [ComplaintController::class, 'submitComplaint']);
         Route::get('/complaints', [ComplaintController::class, 'viewComplaints']);
         Route::put('/complaints/{id}', [ComplaintController::class, 'updateComplaint']);
@@ -137,4 +161,4 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/notifications', [NotificationController::class, 'index']);
     Route::post('/notifications/{notificationId}/read', [NotificationController::class, 'markAsRead']);
 
-}); // <-- THE AUTH GROUP NOW CORRECTLY ENDS HERE
+}); 

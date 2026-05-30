@@ -10,28 +10,39 @@ use App\Notifications\SchoolNotification;
 
 class StudentCourseController extends Controller
 {
-    public function availableCourses()
-    {
-        // Fetch all courses. You can add a where() clause here if you 
-        // only want to show courses for the current semester.
-        $courses = Courses::with('teacher')->get();
-        
-        $formattedCourses = $courses->map(function ($course) {
+public function availableCourses()
+{
+    // جيب المستخدم الحالي
+    $student = auth()->user();
+
+    // IDs المواد اللي سجّل فيها الطالب مسبقاً
+    $joinedCourseIds = $student
+        ? $student->courses()->pluck('courses.id')->toArray()
+        : [];
+
+    // جيب بس المواد المفعّلة واللي ما سجّل فيها
+    $courses = Courses::with('teacher')
+        ->where('is_active', true)          // ← فقط المواد المفعّلة من الأدمن
+        ->whereNotIn('id', $joinedCourseIds) // ← استبعد اللي سجّل فيها
+        ->get();
+
+    $formattedCourses = $courses->map(function ($course) {
         return [
             'id'           => $course->id,
             'name'         => $course->name,
             'code'         => $course->code,
-            'teacher_name' => $course->teacher->name ?? 'غير محدد', // جلب الاسم بدلاً من ID
+            'teacher_name' => $course->teacher->name ?? 'غير محدد',
             'is_active'    => $course->is_active,
             'capacity'     => $course->capacity,
             'created_at'   => $course->created_at,
         ];
     });
+
     return response()->json([
         'success'           => true,
         'available_courses' => $formattedCourses
     ]);
-    }
+}
 
     // 2. The logic when the student presses "Join"
     public function joinCourse(Request $request, $courseId)

@@ -112,4 +112,32 @@ class UserController extends Controller
             return response()->json(['error' => $e->getMessage()], 500);
         }
     }
+
+    /**
+     * Retrieve a list of students who are not yet linked to a parent.
+     *
+     * The parent creation form should only display students that do not already have
+     * a parent. Without this restriction, an admin could attempt to assign a
+     * student who is already linked and then receive a confusing validation error.
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function availableStudents()
+    {
+        // Ensure that only authenticated admins can fetch this list
+        $user = auth()->user();
+        if (!$user || $user->role !== 'admin') {
+            return response()->json([
+                'message' => 'Forbidden: Only Administrators can perform this action.'
+            ], 403);
+        }
+
+        // Return students who do not have any parents linked via the pivot table
+        $students = User::where('role', 'student')
+            ->whereDoesntHave('parents')
+            ->select('id', 'name', 'email')
+            ->get();
+
+        return response()->json($students);
+    }
 }

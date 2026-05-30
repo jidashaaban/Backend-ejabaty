@@ -29,11 +29,21 @@ class ScheduleGenerator {
 }
 
         // 1. CLEAN OLD DATA
-        $schedule = Schedule::where('type', $type)->first();
+        // Fetch the most recently created schedule for this type.  Using
+        // `latest()` ensures we always operate on the newest schedule record.
+        // Without this the first record would be reused, leaving newer
+        // schedules untouched.  This caused the admin interface to fetch
+        // an outdated schedule (with no sessions) after generation.
+        $schedule = Schedule::where('type', $type)->latest()->first();
 
         if ($schedule) {
+            // Remove any existing sessions attached to this schedule.  New
+            // sessions will be generated below.  We intentionally reuse
+            // the latest schedule record so its `created_at` timestamp
+            // continues to indicate when it was last generated.
             Session::where('schedule_id', $schedule->id)->delete();
         } else {
+            // If no schedule exists yet for this type, create one.
             $schedule = Schedule::create(['type' => $type]);
         }
 
@@ -104,13 +114,10 @@ class ScheduleGenerator {
                 $hasStudentConflict = $this->hasStudentConflict($course, $day, $time, $type);
                 $hasTeacherConflict = ($type === 'course') ? $this->hasTeacherConflict($course, $day, $time, $type) : false;
 
-                // NEW: Find an available hall for regular courses
+                // Hall assignment for courses is handled AFTER all sessions are created
+                // by CourseHallAssigner::assignHallsToCourseSchedule() which distributes
+                // all halls properly. We skip per-slot hall check here to avoid single-hall reuse.
                 $hallId = null;
-                if ($type === 'course') {
-                    $hallId = $this->getAvailableHallId($day, $time, $schedule->id);
-                    // If no halls are free at this time, we can't use this slot
-                    if (!$hallId) continue; 
-                }
 
                 if (!$hasStudentConflict && !$hasTeacherConflict) {
                     $calculatedDate=$startDate->copy()->addDays($dayOffsets[$day]);

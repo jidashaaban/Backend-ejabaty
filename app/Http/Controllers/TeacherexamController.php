@@ -33,6 +33,34 @@ class TeacherexamController extends Controller
 
     return response()->json(['success' => true, 'exams' => $exams]);
 }
+
+    public function getExamsByCourseName(Request $request)
+    {
+        $teacher = auth()->user();
+        if (!$teacher || $teacher->role !== 'teacher') {
+            return response()->json(['message' => 'Forbidden'], 403);
+        }
+
+        $courseName = $request->query('course_name');
+        if (!$courseName) {
+            return response()->json(['message' => 'course_name parameter is required'], 400);
+        }
+
+        $course = Courses::where('name', $courseName)
+                         ->where('teacher_id', $teacher->id)
+                         ->first();
+
+        if (!$course) {
+            return response()->json(['message' => 'Course not found or unauthorized'], 404);
+        }
+
+        $exams = Exam::where('course_id', $course->id)
+                     ->select('id', 'title', 'is_published', 'created_at')
+                     ->orderBy('created_at', 'desc')
+                     ->get();
+
+        return response()->json(['success' => true, 'exams' => $exams]);
+    }
     // Stage 1: Create Exam (Already had a check, but kept it safe)
     public function createExam(Request $request)
     {
@@ -150,6 +178,83 @@ class TeacherexamController extends Controller
 
         return response()->json(['success' => true, 'message' => 'Marking scheme submitted successfully!']);
     }
+    /**
+     * جلب الطلاب المسجلين في نفس الكورس الخاص بالامتحان
+     */
+    public function getExamStudents($examId)
+    {
+        $teacher = auth()->user();
+        if (!$teacher || $teacher->role !== 'teacher') {
+            return response()->json(['message' => 'Forbidden'], 403);
+        }
+
+        $exam = Exam::where('id', $examId)
+            ->whereHas('course', function($q) use ($teacher) {
+                $q->where('teacher_id', $teacher->id);
+            })
+            ->with(['course.students', 'students'])
+            ->first();
+
+        if (!$exam) {
+            return response()->json(['message' => 'Exam not found or unauthorized'], 404);
+        }
+
+        // جلب طلاب الكورس مع علاماتهم الحالية إن وجدت
+        $enrolledStudents = $exam->course->students->map(function($student) use ($exam) {
+            $existingMark = $exam->students->firstWhere('id', $student->id);
+            return [
+                'id'   => $student->id,
+                'name' => $student->name,
+                'mark' => $existingMark ? $existingMark->pivot->mark : null,
+            ];
+        });
+
+        return response()->json([
+            'success'  => true,
+            'exam'     => ['id' => $exam->id, 'title' => $exam->title],
+            'course'   => $exam->course->name,
+            'students' => $enrolledStudents,
+        ]);
+    }
+
+    /**
+     * حفظ علامات الطلاب لامتحان معين (bulk save)
+     */
+    public function saveExamGrades(Request $request, $examId)
+    {
+        $teacher = auth()->user();
+        if (!$teacher || $teacher->role !== 'teacher') {
+            return response()->json(['message' => 'Forbidden'], 403);
+        }
+
+        $exam = Exam::where('id', $examId)
+            ->whereHas('course', function($q) use ($teacher) {
+                $q->where('teacher_id', $teacher->id);
+            })
+            ->first();
+
+        if (!$exam) {
+            return response()->json(['message' => 'Exam not found or unauthorized'], 404);
+        }
+
+        $request->validate([
+            'grades'              => 'required|array',
+            'grades.*.student_id' => 'required|exists:users,id',
+            'grades.*.mark'       => 'required|numeric|min:0|max:100',
+        ]);
+
+        foreach ($request->grades as $gradeData) {
+            $exam->students()->syncWithoutDetaching([
+                $gradeData['student_id'] => ['mark' => $gradeData['mark']]
+            ]);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'تم حفظ العلامات بنجاح',
+        ]);
+    }
+
     public function getMarkingSchemesByCourse(Request $request, $courseName)
 {
     $user = auth()->user();

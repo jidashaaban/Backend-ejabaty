@@ -39,7 +39,17 @@ class PollController extends Controller
             'questions.*.options' => 'required|array|min:2',
         ]);
 
-        $poll = Poll::create($request->only('title', 'description', 'expires_at'));
+        // Persist the poll with the currently authenticated admin.  Without
+        // explicitly assigning `admin_id` the value would be null (because
+        // the Poll model has a nullable foreign key).  Including it here
+        // allows us to track which admin created the poll and avoids
+        // potential errors when foreign key constraints are enforced.
+        $poll = Poll::create([
+            'title'       => $request->title,
+            'description' => $request->description,
+            'expires_at'  => $request->expires_at,
+            'admin_id'    => $request->user()->id,
+        ]);
 
         foreach ($request->questions as $qData) {
             $question = $poll->questions()->create(['question_text' => $qData['question_text']]);
@@ -83,21 +93,48 @@ class PollController extends Controller
     }
 
     // 4. UPDATE POLL HEADER (Title/Description)
-    public function update(Request $request, $id)
-    {
-        if (!$this->checkAdmin($request)) return response()->json(['message' => 'Forbidden'], 403);
+public function update(Request $request, $id)
+{
+    if (!$this->checkAdmin($request)) return response()->json(['message' => 'Forbidden'], 403);
 
-        $poll = Poll::find($id);
-        if (!$poll) return response()->json(['message' => 'Poll not found'], 404);
+    $poll = Poll::find($id);
+    if (!$poll) return response()->json(['message' => 'Poll not found'], 404);
 
-        $request->validate([
-            'title' => 'required|string',
-            'expires_at' => 'required|date|after:now',
-        ]);
+    $request->validate([
+        'title'       => 'required|string',
+        'expires_at'  => 'required|date|after:now',
+        'questions'   => 'sometimes|array|min:1',
+        'questions.*.question_text' => 'required_with:questions|string',
+        'questions.*.options'       => 'required_with:questions|array|min:2',
+    ]);
 
-        $poll->update($request->only('title', 'description', 'expires_at'));
-        return response()->json(['message' => 'Poll header updated', 'poll' => $poll]);
+    // 1. تحديث الـ header
+    $poll->update($request->only('title', 'description', 'expires_at'));
+
+    // 2. تحديث الأسئلة إذا أُرسلت
+    if ($request->has('questions')) {
+        // حذف الأسئلة القديمة وخياراتها
+        foreach ($poll->questions as $question) {
+            $question->options()->delete();
+        }
+        $poll->questions()->delete();
+
+        // إعادة إنشاء الأسئلة الجديدة
+        foreach ($request->questions as $qData) {
+            $question = $poll->questions()->create([
+                'question_text' => $qData['question_text']
+            ]);
+            foreach ($qData['options'] as $optionText) {
+                $question->options()->create(['option_text' => $optionText]);
+            }
+        }
     }
+
+    return response()->json([
+        'message' => 'Poll updated successfully',
+        'poll'    => $poll->load('questions.options')
+    ]);
+}
 
     // 5. UPDATE QUESTION & OPTIONS
     public function updateQuestion(Request $request, $id, $questionId)
@@ -191,7 +228,47 @@ class PollController extends Controller
             'poll' => $poll
         ]);
     }
+    // 10. GET POLL RESULTS
+public function results($id)
+{
+    $poll = Poll::with(['questions.options.votes'])->find($id);
+    
+    if (!$poll) {
+        return response()->json(['message' => 'Poll not found'], 404);
+    }
 
+    $totalVoters = PollVote::whereHas('option.question', function($q) use ($id) {
+        $q->where('poll_id', $id);
+    })->distinct('user_id')->count('user_id');
+
+    $results = $poll->questions->map(function($question) use ($totalVoters) {
+        $totalVotesForQuestion = $question->options->sum(fn($o) => $o->votes->count());
+        
+        return [
+            'question_id'   => $question->id,
+            'question_text' => $question->question_text,
+            'total_votes'   => $totalVotesForQuestion,
+            'options'       => $question->options->map(function($option) use ($totalVotesForQuestion) {
+                $count = $option->votes->count();
+                return [
+                    'option_id'   => $option->id,
+                    'option_text' => $option->option_text,
+                    'votes'       => $count,
+                    'percentage'  => $totalVotesForQuestion > 0
+                        ? round(($count / $totalVotesForQuestion) * 100, 1)
+                        : 0,
+                ];
+            }),
+        ];
+    });
+
+    return response()->json([
+        'success'       => true,
+        'poll_title'    => $poll->title,
+        'total_voters'  => $totalVoters,
+        'results'       => $results,
+    ]);
+}
     // STEP 2: Answer the poll
     public function submitAnswers(Request $request, $pollId)
 {

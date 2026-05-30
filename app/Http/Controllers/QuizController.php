@@ -449,4 +449,47 @@ public function updateStudentMark(Request $request, $quizId, $studentId)
     ]);
 }
 
+
+public function getMyPoints(Request $request)
+{
+    $user = $request->user();
+    if (!$user || $user->role !== 'student') {
+        return response()->json(['message' => 'Forbidden'], 403);
+    }
+    $total = DB::table('quiz_student')->where('student_id', $user->id)->sum('points');
+    return response()->json(['success' => true, 'points' => (int) $total]);
 }
+
+public function getMyNotes(Request $request)
+{
+    $user = $request->user();
+    if (!$user || $user->role !== 'student') {
+        return response()->json(['message' => 'Forbidden'], 403);
+    }
+
+    // Get all quiz records for this student that have a comment
+    $records = DB::table('quiz_student')
+        ->join('quizzes', 'quiz_student.quiz_id', '=', 'quizzes.id')
+        ->join('courses', 'quizzes.course_id', '=', 'courses.id')
+        ->join('users as teachers', 'quizzes.teacher_id', '=', 'teachers.id')
+        ->where('quiz_student.student_id', $user->id)
+        ->whereNotNull('quiz_student.comment')
+        ->where('quiz_student.comment', '!=', '')
+        ->select(
+            'quiz_student.comment',
+            'quiz_student.points',
+            'courses.name as course_name',
+            'teachers.name as teacher_name',
+            'quiz_student.updated_at as date'
+        )
+        ->orderBy('quiz_student.updated_at', 'desc')
+        ->get();
+
+    return response()->json([
+        'success' => true,
+        'notes'   => $records,
+    ]);
+}
+
+
+}   
