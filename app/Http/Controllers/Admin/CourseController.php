@@ -41,7 +41,7 @@ public function store(Request $request)
         'code'       => $request->code,
         'capacity'   => $request->capacity,
         'teacher_id' => $teacher->id,
-        'is_active'  => true,   // ← تفعيل المادة فوراً
+        'is_active'  => false,  
     ]);
 
     $teacher->notify(new SchoolNotification(

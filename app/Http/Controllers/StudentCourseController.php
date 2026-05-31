@@ -81,6 +81,7 @@ public function availableCourses()
     $student->courses()->attach($courseId, [
         'status' => 'pending_payment',
         'booked_at' => now(),
+        'is_active' => false,
     ]);
 
     // 6. Notify the Student
@@ -130,6 +131,7 @@ public function myCourses(Request $request)
             'code' => $course->code,
             'teacher_name' => $course->teacher->name ?? 'N/A',
             'status' => $course->pivot->status ?? 'unknown', // Access data from user_course table
+            'student_course_active' => (bool) ($course->pivot->is_active ?? false),
         ];
     });
 
