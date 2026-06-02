@@ -194,8 +194,7 @@ class CourseRegistrationController extends Controller
             ], 403);
         }
 
-        $activeCourses = $student->courses()
-            ->wherePivot('is_active', true)
+        $allCourses = $student->courses()
             ->with('teacher')
             ->get()
             ->map(function ($course) {
@@ -212,8 +211,8 @@ class CourseRegistrationController extends Controller
 
         return response()->json([
             'success' => true,
-            'active_courses' => $activeCourses,
-            'count' => count($activeCourses)
+            'active_courses' => $allCourses,
+            'count' => count($allCourses)
         ]);
     }
 
