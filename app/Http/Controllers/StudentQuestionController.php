@@ -8,67 +8,110 @@ use App\Notifications\SchoolNotification;
 
 class StudentQuestionController extends Controller
 {
+    public function getTeachersByCourse(Request $request, $courseId)
+    {
+        $student = $request->user();
+
+        // 1. Check if student is actually enrolled in this course
+        $isEnrolled = DB::table('user_course')
+            ->where('user_id', $student->id)
+            ->where('course_id', $courseId)
+            ->where('is_active', true)
+            ->exists();
+
+        if (!$isEnrolled) {
+            return response()->json(['message' => 'Forbidden: Not enrolled in this course.'], 403);
+        }
+
+        // 2. Fetch the teacher assigned to this course
+        $course = Courses::find($courseId);
+        if (!$course || !$course->teacher_id) {
+            return response()->json(['message' => 'No teacher assigned to this course.'], 404);
+        }
+
+        $teacher = User::find($course->teacher_id);
+
+        return response()->json([
+            'success' => true,
+            'teacher' => [
+                'id' => $teacher->id,
+                'name' => $teacher->name
+            ]
+        ]);
+    }
     /**
      * 1. Ask a Question
      * Uses Token to identify the student.
      */
     public function askQuestion(Request $request)
     {
-        $student = $request->user(); // Identifies student via Token
+        $student = $request->user();
 
         if (!$student || $student->role !== 'student') {
             return response()->json(['message' => 'Forbidden: Students only.'], 403);
         }
 
         $request->validate([
+            'course_id'  => 'required|exists:courses,id',
             'teacher_id' => 'required|exists:users,id',
-            'question' => 'required|string'
+            'question'   => 'required|string'
         ]);
 
+        // SECURITY VALIDATION: 
+        // Ensure the student is enrolled in the course AND the teacher teaches it.
+        $isEnrolled = DB::table('user_course')
+            ->where('user_id', $student->id)
+            ->where('course_id', $request->course_id)
+            ->where('is_active', true)
+            ->exists();
+
+        $isCorrectTeacher = Courses::where('id', $request->course_id)
+            ->where('teacher_id', $request->teacher_id)
+            ->exists();
+
+        if (!$isEnrolled || !$isCorrectTeacher) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Security Error: You are not authorized to ask this teacher about this specific course.'
+            ], 403);
+        }
+
+        // Create the question record
         $question = Question::create([
             'student_id' => $student->id,
             'teacher_id' => $request->teacher_id,
-            'question' => $request->question
+            'question'   => $request->question
         ]);
 
         // Notify Teacher
         $teacher = User::find($request->teacher_id);
-        if ($teacher) {
-            $teacher->notify(new SchoolNotification(
-                "New Student Question",
-                "{$student->name} has sent you a new question.",
-                "student_question",
-                $question->id
-            ));
-        }
+        $teacher->notify(new SchoolNotification(
+            "New Student Question",
+            "{$student->name} has sent you a new question for your course.",
+            "student_question",
+            $question->id
+        ));
 
-        return response()->json(['message' => 'Question sent successfully!', 'data' => $question]);
+        return response()->json([
+            'success' => true, 
+            'message' => 'Question sent successfully!'
+        ]);
     }
-
-    /**
-     * 2. View My Questions & Answers
-     * Returns Teacher Names and Question Status.
-     */
     public function myQuestions(Request $request)
     {
         $student = $request->user();
 
         $questions = Question::where('student_id', $student->id)
-            ->with('teacher:id,name') // Eager load teacher name
+            ->with('teacher:id,name') 
             ->orderBy('created_at', 'desc')
             ->get();
 
-        if ($questions->isEmpty()) {
-            return response()->json(['message' => 'No questions found.', 'data' => []]);
-        }
-
-        // Format to show Names and Answers
         $formatted = $questions->map(function($q) {
             return [
                 'id' => $q->id,
                 'teacher_name' => $q->teacher->name ?? 'Unknown Teacher',
                 'question_text' => $q->question,
-                'answer_text' => $q->answer ?? 'Pending teacher response...', // Assumes column is 'answer'
+                'answer_text' => $q->answer ?? 'Pending teacher response...',
                 'status' => $q->answer ? 'Answered' : 'Waiting',
                 'asked_on' => $q->created_at->format('Y-m-d H:i'),
             ];

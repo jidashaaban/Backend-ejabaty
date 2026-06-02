@@ -137,6 +137,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/polls/{pollId}/submit', [PollController::class, 'submitAnswers']);
         Route::put('/questions/{id}', [StudentQuestionController::class, 'updateQuestion']);
         Route::delete('/questions/{id}', [StudentQuestionController::class, 'deleteQuestion']);
+
+        Route::get('/courses/{courseId}/teacher', [StudentQuestionController::class, 'getTeachersByCourse']);
     });
 
     // Parent Specific Routes
