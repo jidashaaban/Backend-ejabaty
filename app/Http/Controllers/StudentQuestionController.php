@@ -5,6 +5,9 @@ use Illuminate\Http\Request;
 use App\Models\Question; 
 use App\Models\User;
 use App\Notifications\SchoolNotification;
+use Illuminate\Support\Facades\DB;
+use App\Models\Courses;
+
 
 class StudentQuestionController extends Controller
 {
@@ -80,6 +83,7 @@ class StudentQuestionController extends Controller
         $question = Question::create([
             'student_id' => $student->id,
             'teacher_id' => $request->teacher_id,
+            'course_id'  => $request->course_id,
             'question'   => $request->question
         ]);
 
@@ -102,18 +106,20 @@ class StudentQuestionController extends Controller
         $student = $request->user();
 
         $questions = Question::where('student_id', $student->id)
-            ->with('teacher:id,name') 
+            ->with(['teacher:id,name', 'course:id,name'])
             ->orderBy('created_at', 'desc')
             ->get();
 
         $formatted = $questions->map(function($q) {
             return [
-                'id' => $q->id,
+                'id'           => $q->id,
+                'course_id'    => $q->course_id,
+                'course_name'  => $q->course->name ?? null,
                 'teacher_name' => $q->teacher->name ?? 'Unknown Teacher',
                 'question_text' => $q->question,
-                'answer_text' => $q->answer ?? 'Pending teacher response...',
-                'status' => $q->answer ? 'Answered' : 'Waiting',
-                'asked_on' => $q->created_at->format('Y-m-d H:i'),
+                'answer_text'  => $q->answer ?? 'Pending teacher response...',
+                'status'       => $q->answer ? 'Answered' : 'Waiting',
+                'asked_on'     => $q->created_at->format('Y-m-d H:i'),
             ];
         });
 

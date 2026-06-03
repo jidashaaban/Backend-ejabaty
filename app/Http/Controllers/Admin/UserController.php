@@ -34,9 +34,6 @@ class UserController extends Controller
             'past_education'=>'required_if:role,student|string',
             'last_years_mark' => 'required_if:role,student|numeric',
             'status' => 'required_if:role,student|in:active,unactive',
-            // THE FIX:
-            // 1. Array is required if role is parent.
-            // 2. Each ID must exist in users table AND have the role 'student'.
             'course_ids' => 'required_if:role,student,teacher|array', 
             'student_ids' => 'required_if:role,parent|array|min:1',
             'student_ids.*' => [
@@ -47,7 +44,7 @@ class UserController extends Controller
                 'unique:parent_student,student_id'
             ],
         ], [
-            // Custom error message so the Admin knows WHY it failed
+            
             'student_ids.*.exists' => 'One or more selected users are not registered as students.',
             'student_ids.*.unique' => 'One or more students are already linked to another parent.'
         ]);
@@ -86,18 +83,18 @@ class UserController extends Controller
         }
                 }
 
-            // 3. LOGIC FOR STUDENTS (Linking to user_course table)
+            
             if ($user->role === 'student' && $request->has('course_ids')) {
-                // This fills your user_course table using the relationship in your model
+                
                 $user->courses()->attach($request->course_ids, [
                     'status' => 'booked',
                     'booked_at' => now()
                 ]);
             }
 
-            // 4. LOGIC FOR TEACHERS (Updating the teacher_id column in courses)
+            
             if ($user->role === 'teacher' && $request->has('course_ids')) {
-                // Teachers are linked directly on the courses table
+                
                 \App\Models\Courses::whereIn('id', $request->course_ids)
                     ->update(['teacher_id' => $user->id]);
             }
@@ -124,7 +121,7 @@ class UserController extends Controller
      */
     public function availableStudents()
     {
-        // Ensure that only authenticated admins can fetch this list
+        //only authenticated admins can fetch this list
         $user = auth()->user();
         if (!$user || $user->role !== 'admin') {
             return response()->json([
@@ -132,7 +129,7 @@ class UserController extends Controller
             ], 403);
         }
 
-        // Return students who do not have any parents linked via the pivot table
+        //return students who do not have any parents 
         $students = User::where('role', 'student')
             ->whereDoesntHave('parents')
             ->select('id', 'name', 'email')

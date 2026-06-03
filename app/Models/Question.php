@@ -9,7 +9,7 @@ class Question extends Model
 {
     use HasFactory;
     protected $fillable = [
-        'student_id', 'teacher_id', 'question', 'answer', 'is_answered'
+        'student_id', 'teacher_id','course_id', 'question', 'answer', 'is_answered'
     ];
 
     public function student()
@@ -20,5 +20,9 @@ class Question extends Model
     public function teacher()
     {
         return $this->belongsTo(User::class, 'teacher_id');
+    }
+    public function course()
+    {
+        return $this->belongsTo(Courses::class,'course_id');
     }
 }

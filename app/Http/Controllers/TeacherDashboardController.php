@@ -47,7 +47,7 @@ class TeacherDashboardController extends Controller
                 ->whereHas('course', function ($query) use ($teacher) {
                     $query->where('teacher_id', $teacher->id); // Filter sessions by teacher [cite: 1, 193]
                 })
-                ->with('course:id,name,code') 
+                ->with(['course:id,name,code','hall:id,name']) 
                 ->get();
         }
 

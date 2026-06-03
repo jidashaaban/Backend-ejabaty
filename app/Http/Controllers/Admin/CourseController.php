@@ -35,7 +35,7 @@ public function store(Request $request)
         ], 404);
     }
 
-    // ← هنا الإصلاح: نبني البيانات يدوياً بدون teacher_name، ونضيف is_active
+    
     $course = Courses::create([
         'name'       => $request->name,
         'code'       => $request->code,
@@ -98,18 +98,18 @@ public function confirmPayment(Request $request)
     ]);
 }
     public function index() {
-    return response()->json(Courses::all(), 200); // Retrieve all courses [cite: 15]
+    return response()->json(Courses::all(), 200); 
     }
     public function show($id) {
     $course = Courses::find($id);
     if (!$course) return response()->json(['message' => 'Course not found'], 404);
-    return response()->json($course, 200); // Retrieve course by ID
+    return response()->json($course, 200); 
     }
     public function update(Request $request, $id) {
     $course = Courses::find($id);
     if (!$course) return response()->json(['message' => 'Course not found'], 404);
     
-    // Ensure fields are in your $fillable array in Course.php [cite: 69, 70]
+    
     $course->update($request->all()); 
     $students = User::where('role', 'student')->get();
     foreach ($students as $student) {
@@ -135,7 +135,7 @@ public function confirmPayment(Request $request)
     public function toggleCourseStatus($id)
 {
     $course = Courses::findOrFail($id);
-    $course->is_active = !$course->is_active; // Flips true to false, or false to true
+    $course->is_active = !$course->is_active; 
     $course->save();
 
     return response()->json([

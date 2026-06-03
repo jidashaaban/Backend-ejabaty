@@ -35,12 +35,12 @@ class ScheduleController extends Controller
             return response()->json(['success' => false, 'message' => 'Session not found'], 404);
         }
 
-        // Notify and Delete logic...
+        
         $courseName = $session->course->name;
         $day = $session->day;
         $time = $session->start_time;
 
-        // Notification logic remains same...
+        
         $session->delete();
 
         return response()->json(['success' => true, 'message' => 'Session deleted successfully']);
@@ -134,11 +134,13 @@ class ScheduleController extends Controller
             // 3. Generate the Time Slots (The "Engine")
             $result = $this->scheduleGenerator->generate($request->type);
             $schedule = $result['schedule'];
+            $schedule->update(['admin_id' => $user->id]);
+            $schedule->save();
             $adminAlerts = [];
 
             // 4. Hall Assignment Logic
             if ($request->type === 'course') {
-                // Use your newly named service and function
+                
                 $adminAlerts = $this->courseHallAssigner->assignHallsToCourseSchedule($schedule->id);
             } else {
                 // If it's an exam, trigger the exam hall logic
@@ -146,10 +148,10 @@ class ScheduleController extends Controller
                 $adminAlerts = $examResult['report'] ?? [];
             }
 
-            // 5. Eager load for clean JSON output
+            
             $schedule->load(['sessions.hall', 'sessions.course', 'sessions.hallAssignments.hall']);
 
-            // 6. Notify Users
+            
             $typeName = ($request->type === 'exam') ? 'Exam' : 'Course';
             $usersToNotify = User::whereIn('role', ['student', 'teacher'])->get();
             foreach ($usersToNotify as $user) {

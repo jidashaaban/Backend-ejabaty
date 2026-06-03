@@ -194,25 +194,28 @@ class CourseRegistrationController extends Controller
             ], 403);
         }
 
-        $allCourses = $student->courses()
+        $activeCourses = $student->courses()
             ->with('teacher')
+            ->wherePivot('is_active', true)
+            ->wherePivot('status', 'active')
             ->get()
             ->map(function ($course) {
                 return [
-                    'id' => $course->id,
-                    'name' => $course->name,
-                    'code' => $course->code,
+                    'id'           => $course->id,
+                    'name'         => $course->name,
+                    'code'         => $course->code,
+                    'teacher_id'   => $course->teacher_id,
                     'teacher_name' => $course->teacher->name ?? 'غير محدد',
-                    'status' => $course->pivot->status,
-                    'is_active' => $course->pivot->is_active,
-                    'booked_at' => $course->pivot->booked_at
+                    'status'       => $course->pivot->status,
+                    'is_active'    => $course->pivot->is_active,
+                    'booked_at'    => $course->pivot->booked_at,
                 ];
             });
 
         return response()->json([
-            'success' => true,
-            'active_courses' => $allCourses,
-            'count' => count($allCourses)
+            'success'        => true,
+            'active_courses' => $activeCourses,
+            'count'          => count($activeCourses),
         ]);
     }
 

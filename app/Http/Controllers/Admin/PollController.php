@@ -14,7 +14,7 @@ use Illuminate\Support\Facades\DB;
 
 class PollController extends Controller
 {
-    // Private helper to avoid repeating the admin check code
+    
     private function checkAdmin(Request $request) {
         $user = $request->user();
         if (!$user || $user->role !== 'admin') {
@@ -23,7 +23,6 @@ class PollController extends Controller
         return true;
     }
 
-    // 1. CREATE POLL
     public function store(Request $request)
     {
         if (!$this->checkAdmin($request)) {
@@ -39,11 +38,7 @@ class PollController extends Controller
             'questions.*.options' => 'required|array|min:2',
         ]);
 
-        // Persist the poll with the currently authenticated admin.  Without
-        // explicitly assigning `admin_id` the value would be null (because
-        // the Poll model has a nullable foreign key).  Including it here
-        // allows us to track which admin created the poll and avoids
-        // potential errors when foreign key constraints are enforced.
+        
         $poll = Poll::create([
             'title'       => $request->title,
             'description' => $request->description,
@@ -59,12 +54,11 @@ class PollController extends Controller
             }
         }
 
-        // Notify Students
         $usersToNotify = User::where('role', 'student')->get();
         foreach ($usersToNotify as $user) {
             $user->notify(new SchoolNotification(
                 "New Poll Available!",
-                "The Admin posted a new survey: " . $poll->title, // Fixed: title instead of question
+                "The Admin posted a new survey: " . $poll->title, 
                 "new_poll",
                 $poll->id
             ));
@@ -73,7 +67,7 @@ class PollController extends Controller
         return response()->json(['success' => true, 'data' => $poll->load('questions.options')], 201);
     }
 
-    // 2. LIST ALL POLLS
+    
     public function index()
     {
         $polls = Poll::withCount('questions')
@@ -84,7 +78,7 @@ class PollController extends Controller
         return response()->json(['success' => true, 'data' => $polls]);
     }
 
-    // 3. SHOW SINGLE POLL
+
     public function show($id)
     {
         $poll = Poll::with(['questions.options'])->find($id);
@@ -92,7 +86,7 @@ class PollController extends Controller
         return response()->json($poll, 200);
     }
 
-    // 4. UPDATE POLL HEADER (Title/Description)
+    
 public function update(Request $request, $id)
 {
     if (!$this->checkAdmin($request)) return response()->json(['message' => 'Forbidden'], 403);
@@ -108,18 +102,18 @@ public function update(Request $request, $id)
         'questions.*.options'       => 'required_with:questions|array|min:2',
     ]);
 
-    // 1. تحديث الـ header
+    
     $poll->update($request->only('title', 'description', 'expires_at'));
 
-    // 2. تحديث الأسئلة إذا أُرسلت
+    
     if ($request->has('questions')) {
-        // حذف الأسئلة القديمة وخياراتها
+        
         foreach ($poll->questions as $question) {
             $question->options()->delete();
         }
         $poll->questions()->delete();
 
-        // إعادة إنشاء الأسئلة الجديدة
+        
         foreach ($request->questions as $qData) {
             $question = $poll->questions()->create([
                 'question_text' => $qData['question_text']
@@ -136,7 +130,6 @@ public function update(Request $request, $id)
     ]);
 }
 
-    // 5. UPDATE QUESTION & OPTIONS
     public function updateQuestion(Request $request, $id, $questionId)
     {
         if (!$this->checkAdmin($request)) return response()->json(['message' => 'Forbidden'], 403);
@@ -158,7 +151,7 @@ public function update(Request $request, $id)
         return response()->json(['message' => 'Question and options updated']);
     }
 
-    // 6. DELETE QUESTION
+    
     public function destroyQuestion(Request $request, $id, $questionId)
     {
         if (!$this->checkAdmin($request)) return response()->json(['message' => 'Forbidden'], 403);
@@ -170,7 +163,7 @@ public function update(Request $request, $id)
         return response()->json(['message' => 'Question deleted']);
     }
 
-    // 7. DELETE FULL POLL
+
     public function destroy(Request $request, $id)
     {
         if (!$this->checkAdmin($request)) return response()->json(['message' => 'Forbidden'], 403);
@@ -182,7 +175,7 @@ public function update(Request $request, $id)
         return response()->json(['message' => 'Full poll deleted']);
     }
 
-    // 8. UPDATE SINGLE OPTION
+    
     public function updateOption(Request $request, $id, $questionId, $optionId)
     {
         if (!$this->checkAdmin($request)) return response()->json(['message' => 'Forbidden'], 403);
@@ -199,7 +192,7 @@ public function update(Request $request, $id)
         return response()->json(['message' => 'Option updated', 'option' => $option]);
     }
 
-    // 9. DELETE SINGLE OPTION
+    
     public function destroyOption(Request $request, $id, $questionId, $optionId)
     {
         if (!$this->checkAdmin($request)) return response()->json(['message' => 'Forbidden'], 403);
@@ -220,7 +213,7 @@ public function update(Request $request, $id)
     }
     public function showPoll($pollId)
     {
-        // Eager load questions and their specific options
+
         $poll = Poll::with('questions.options')->findOrFail($pollId);
 
         return response()->json([
@@ -228,7 +221,7 @@ public function update(Request $request, $id)
             'poll' => $poll
         ]);
     }
-    // 10. GET POLL RESULTS
+    
 public function results($id)
 {
     $poll = Poll::with(['questions.options.votes'])->find($id);

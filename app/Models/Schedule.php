@@ -9,7 +9,7 @@ class Schedule extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['type'];
+    protected $fillable = ['type','admin_id'];
 
     public function sessions() {
         return $this->hasMany(Session::class);

@@ -43,7 +43,7 @@ class ScheduleGenerator {
             // continues to indicate when it was last generated.
             Session::where('schedule_id', $schedule->id)->delete();
         } else {
-            // If no schedule exists yet for this type, create one.
+            
             $schedule = Schedule::create(['type' => $type]);
         }
 
@@ -69,7 +69,7 @@ class ScheduleGenerator {
                         $failedCourses[] = $hallResult;
                     } 
                 } 
-                // Note: For 'course' type, the room was already assigned inside assignSession()
+                //for course type the room was already assigned inside assignSession()
             } else {
                 $failedCourses[] = "Alert: Could not find a time slot or available hall for {$course->name}";
             }

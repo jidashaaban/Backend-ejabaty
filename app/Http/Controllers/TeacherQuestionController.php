@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\Question; 
 use App\Models\User;
+use App\Models\Courses; 
+use App\Notifications\SchoolNotification;
 
 class TeacherQuestionController extends Controller
 {
