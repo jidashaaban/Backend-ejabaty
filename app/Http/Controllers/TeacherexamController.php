@@ -115,7 +115,6 @@ class TeacherexamController extends Controller
             ->with('questions')
             ->first();
 
-        // --- FIX ADDED HERE ---
         if (!$exam) {
             return response()->json(['message' => 'Exam not found or you are not authorized.'], 404);
         }
@@ -140,7 +139,6 @@ class TeacherexamController extends Controller
             })
             ->first();
 
-        // --- CRITICAL FIX: Add this check before the loop ---
         if (!$exam) {
             return response()->json([
                 'success' => false,
@@ -199,7 +197,6 @@ class TeacherexamController extends Controller
             return response()->json(['message' => 'Exam not found or unauthorized'], 404);
         }
 
-        // جلب طلاب الكورس مع علاماتهم الحالية إن وجدت
         $enrolledStudents = $exam->course->students->map(function($student) use ($exam) {
             $existingMark = $exam->students->firstWhere('id', $student->id);
             return [
@@ -217,9 +214,6 @@ class TeacherexamController extends Controller
         ]);
     }
 
-    /**
-     * حفظ علامات الطلاب لامتحان معين (bulk save)
-     */
     public function saveExamGrades(Request $request, $examId)
     {
         $teacher = auth()->user();

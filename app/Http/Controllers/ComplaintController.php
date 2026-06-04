@@ -127,7 +127,7 @@ public function getAllComplaints(Request $request)
     }
 
     // 2. Fetch all complaints with parent details
-    // We assume you have a 'parent' relationship defined in your Complaint model
+    
     $complaints = Complaint::with('parent:id,name,email')
         ->latest()
         ->get();

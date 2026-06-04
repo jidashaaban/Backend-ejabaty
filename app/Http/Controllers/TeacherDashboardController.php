@@ -15,7 +15,7 @@ class TeacherDashboardController extends Controller
     
         public function getDashboardStats(Request $request)
     {
-        // Automatically get the authenticated teacher from the token [cite: 199, 270]
+        
         $teacher = $request->user();
         if (!$teacher) {
             return response()->json(['error' => 'Unauthenticated. Missing or invalid Bearer Token.'], 401);
@@ -25,10 +25,8 @@ class TeacherDashboardController extends Controller
             return response()->json(['error' => 'Unauthorized Access'], 403);
         }
 
-        // 1. Metric: Number of courses taught [cite: 1, 553]
         $coursesCount = Courses::where('teacher_id', $teacher->id)->count();
 
-        // 2. Metric: Number of Quizzes assigned [cite: 150, 482]
         $quizzesCount = Quiz::where('teacher_id', $teacher->id)->count();
 
         // 3. Metric: Number of Marking Schemes submitted [cite: 113, 529]
@@ -41,11 +39,11 @@ class TeacherDashboardController extends Controller
         // 4. Metric: Special Course Schedule [cite: 192, 193, 210]
         $latestSchedule = Schedule::where('type', 'course')->latest()->first();
         $mySchedule = [];
-        
+    
         if ($latestSchedule) {
             $mySchedule = Session::where('schedule_id', $latestSchedule->id)
                 ->whereHas('course', function ($query) use ($teacher) {
-                    $query->where('teacher_id', $teacher->id); // Filter sessions by teacher [cite: 1, 193]
+                    $query->where('teacher_id', $teacher->id); // Filter sessions by teacher 
                 })
                 ->with(['course:id,name,code','hall:id,name']) 
                 ->get();
